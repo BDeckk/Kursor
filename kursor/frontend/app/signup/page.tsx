@@ -9,10 +9,12 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setMessage("");
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -22,7 +24,8 @@ export default function SignupPage() {
     if (error) {
       setError(error.message);
     } else {
-      router.push("/login");
+      // Supabase will send confirmation email automatically
+      setMessage("Check your email inbox for a confirmation link to activate your account.");
     }
   };
 
@@ -31,6 +34,7 @@ export default function SignupPage() {
       <form onSubmit={handleSignup} className="bg-white p-8 rounded shadow w-96">
         <h2 className="text-2xl font-bold mb-6">Sign Up</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
+        {message && <p className="text-green-600 mb-4">{message}</p>}
         
         <input
           type="email"
