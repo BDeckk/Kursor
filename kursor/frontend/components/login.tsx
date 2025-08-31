@@ -1,37 +1,34 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/supabaseClient";
 
-export default function SignupModal({
+export default function LoginModal({
   onClose,
 }: {
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setMessage("");
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+      if (error) throw error;
 
-      if (error) {
-        setError(error.message);
-      } else {
-        // Supabase will send confirmation email automatically
-        setMessage("Check your email inbox for a confirmation link to activate your account.");
-      }
+      router.push("/dashboard");
+      onClose(); 
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -49,10 +46,9 @@ export default function SignupModal({
           ✕
         </button>
 
-        <h2 className="text-2xl font-bold mb-6">Sign Up</h2>
+        <h2 className="text-2xl font-bold mb-6">Log In</h2>
 
         {error && <p className="text-red-500 mb-4">{error}</p>}
-        {message && <p className="text-green-600 mb-4">{message}</p>}
 
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
           <input
@@ -76,9 +72,9 @@ export default function SignupModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded font-semibold disabled:opacity-50"
+            className="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-2 rounded font-semibold disabled:opacity-50"
           >
-            {loading ? "Signing up..." : "Sign Up"}
+            {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
       </div>
