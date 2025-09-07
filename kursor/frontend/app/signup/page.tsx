@@ -24,13 +24,18 @@ export default function SignupModal({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`, 
+          // ✅ after clicking confirmation email → send back to homepage
+        },
       });
 
       if (error) {
         setError(error.message);
       } else {
-        // Supabase will send confirmation email automatically
-        setMessage("Check your email inbox for a confirmation link to activate your account.");
+        setMessage(
+          "Check your email inbox for a confirmation link to activate your account."
+        );
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
