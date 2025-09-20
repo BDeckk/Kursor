@@ -5,7 +5,6 @@ import Navbar from "@/components/homepage-navbar";
 import { useRouter } from "next/navigation";
 import HomeCards from "@/components/ui/home_carousel";
 import { MiniCarousel } from "@/components/ui/mini-carousel";
-import { imageConfigDefault } from "next/dist/shared/lib/image-config";
 import { SchoolCarousel } from "@/components/ui/school-carousel";
 
 
@@ -35,7 +34,7 @@ export default function DashboardPage() {
     { title: "Law & Legal Studies", image: "/images/law.png" },
   ]
 
-  //Temporary!Coursel slides content, second carousel "Fields that might interest you"
+  //Temporary! Coursel slides content, third carousel "School - mini carousel - thingy"
   const schoolList = [
     { rank: 1, schoolname: "Cebu Insitute of Technology - University", image: "/temporary-school-logo/CIT.png"},
     { rank: 2, schoolname: "University of San Carlos", image: "/temporary-school-logo/USC.png"},
@@ -64,7 +63,7 @@ export default function DashboardPage() {
       <main className="pb-[10%]">
 
         {/* Carousel Section */}
-        <div className="mb-9 pl-[19%] pr-[19%] pt-[6%]">
+        <div className="mb-9 pl-[19%] pr-[19%] pt-[7%]">
          <HomeCards slides={slides}/>
         </div>
 
