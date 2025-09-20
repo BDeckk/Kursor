@@ -19,7 +19,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Navbar */}
-        <header className="flex justify-between items-center h-20 pl-10 pr-20 fixed top-6 left-0 w-full z-50 bg-transparent">
+      <header className="flex justify-between items-center h-20 pl-10 pr-20 fixed top-6 left-0 w-full z-50 bg-transparent">
         {/* Logo (not affected by blend mode) */}
         <div className="flex items-center">
           <img
