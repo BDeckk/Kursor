@@ -35,7 +35,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="flex justify-between items-center h-20 fixed top-6 left-0 w-full z-50 bg-transparent pr-[14%]">
+    <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-transparent pr-[14%]">
       {/* Logo */}
       <div className="flex items-center pl-[13%]">
         <img
@@ -46,7 +46,7 @@ export default function Navbar() {
       </div>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 pt-5">
         {/* Home Button */}
         <button
           onClick={handleHomeClick}
