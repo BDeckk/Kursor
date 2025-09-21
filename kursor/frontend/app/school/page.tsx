@@ -1,14 +1,18 @@
-"use-client"; 
+"use client"; 
 
 import Navbar from "@/components/homepage-navbar";
-import { Main } from "next/document";
-import React from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function SchoolPage() {
-return (
-    <main className="min-h-screen bg-white">
-        <Navbar />
-        <h1>School Page</h1>
-    </main>
-)
+  const params = useSearchParams();
+  const schoolName = params.get("name");
+
+  return (
+    <div className="min-h-screen bg-white">
+          {/* Navbar */}
+          <Navbar />
+        <h1 className="pt-[20%]">Welcome to {schoolName}</h1>
+    </div>
+  
+);
 }

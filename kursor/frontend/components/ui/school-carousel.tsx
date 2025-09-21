@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter } from "next/navigation";
+
 
 interface School {
   rank: number;
@@ -12,6 +14,7 @@ interface SchoolCarouselProps {
 }
 
 const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
+  const router = useRouter();
   const [currentSet, setCurrentSet] = useState(0);
 
   const allSchools = school_card.map(school => ({
@@ -60,21 +63,21 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-8 bg-gray-50 min-h-screen">
+    <div className="w-full max-w-6xl mx-auto">
       <div className="relative">
         {/* Navigation Buttons */}
         {setsOfThree.length > 1 && (
           <>
             <button
               onClick={prevSet}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+              className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
             >
               <ChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
 
             <button
               onClick={nextSet}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
+              className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
             >
               <ChevronRight className="w-6 h-6 text-gray-600" />
             </button>
@@ -82,15 +85,17 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
         )}
 
         {/* Podium Layout */}
-        <div className="flex justify-center items-end gap-4 px-16">
+        <div className="flex justify-center items-end gap-5 px-16 pt-5">
           {getCardOrder().map((school, index: number) => (
-            <div key={`school-${school.rank}-${currentSet}`} className="flex flex-col items-center">
+            <div key={`school-${school.rank}-${currentSet}`} className="flex flex-col items-center cursor-pointer transition-transform duration-300 hover:scale-110" 
+            onClick={() => router.push(`/school?name=${encodeURIComponent(school.name)}`)}
+            >
               {/* School Logo - Outside and above the card */}
-              <div className="w-32 h-32 mb-4 flex items-center justify-center">
+              <div className="w-48 h-48 mb-4 flex items-center justify-center">
                 <img
                   src={school.logo}
                   alt={school.name}
-                  className="w-28 h-28 object-cover rounded-full border-4 border-gray-100"
+                  className="w-48 h-48 object-cover rounded-full"
                 />
               </div>
 
@@ -101,9 +106,10 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
 
               {/* The Card with just the rank */}
               <div
-                className={`bg-white flex flex-col items-center justify-center text-center w-72 transform transition-all duration-300 shadow-lg border-2 border-gray-200 ${getCardHeight(index)}`}
+                className={`bg-white flex flex-col items-center justify-center text-center w-76 transform transition-all duration-300 shadow-lg rounded-t-3xl border-2 border-gray-100 ${getCardHeight(index)}`}
               >
-                <div className="rounded-2xl px-8 py-6 shadow-inner">
+
+                <div className="">
                   <span className={`font-bold text-yellow-400 ${getRankTextSize(school.rank)}`}>
                     {school.rank}
                   </span>

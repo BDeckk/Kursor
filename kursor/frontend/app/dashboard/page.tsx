@@ -109,7 +109,7 @@ export default function DashboardPage() {
       <Navbar />
 
       {/* Main Content */}
-      <main className="pb-[10%]">
+      <main className="pb-1">
 
         {/* Carousel Section */}
         <div className="mb-9 pl-[19%] pr-[19%] pt-[7%]">
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           <div className="bg-[#FFDE59] py-12 w-full">
             {/* Title inside yellow background */}
             <div className="px-[6%] mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-3xl font-bold text-gray-800">
                 Fields that might <span className="text-[#FFFFFF]">interest you</span>
               </h2>
             </div>
@@ -192,20 +192,21 @@ export default function DashboardPage() {
         </div>
 
          {/*School - mini carousel - thingy */}
-          <div className="w-full pl-[6%] pr-[6%] pt-[5%]">
+          <div className="w-full pl-[6%] pr-[6%] pt-[2%] mt-5">
           <div className="px-[6%] mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-3xl font-bold text-gray-800 text-right pl-10" >
                 Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span>
               </h2>
             </div>
           <SchoolCarousel school_card={schoolList}/>
         </div>
 
+
         {/* Top Rated Schools Based on Student Reviews */}
-          <div className="w-full pl-[6%] pr-[6%] pt-[5%]">
+          <div className="w-full pt-[3%] bg-[#FFDE59] py-12 w-full mt-20 pb-[2%]">
           <div className="px-[6%] mb-8">
-              <h2 className="text-2xl font-bold text-gray-800">
-                Top-Rated Schools <span className="text-[#FFDE59]">Based on Student Reviews</span>
+              <h2 className="text-3xl font-bold text-gray-800 mb-10 pl-10">
+                Top-Rated Schools <span className="text-white">Based on Student Reviews</span>
               </h2>
             </div>
           <SchoolCarousel school_card={schoolList}/>
