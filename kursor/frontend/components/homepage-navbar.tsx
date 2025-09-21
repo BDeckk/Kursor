@@ -35,9 +35,13 @@ export default function Navbar() {
   };
 
   return (
-    <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-transparent pr-[14%]">
+    <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
+
+
+
+
       {/* Logo */}
-      <div className="flex items-center pl-[13%]">
+      <div className="flex items-center ">
         <img
           src="/Kursor.png"
           alt="Kursor logo"
