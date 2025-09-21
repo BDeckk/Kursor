@@ -178,7 +178,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Fields that might interest you */}
-        <div className="w-full pt-[8%]">
+        <div className="w-full pt-[5%]">
           {/* Yellow background section with title and carousel inside */}
           <div className="bg-[#FFDE59] py-12 w-full">
             {/* Title inside yellow background */}
@@ -192,14 +192,22 @@ export default function DashboardPage() {
         </div>
 
          {/*School - mini carousel - thingy */}
-          <div className="w-full pl-[6%] pr-[6%] pt-[15%]">
-          <h1>Top Rated Schools Based on Statistics</h1>
+          <div className="w-full pl-[6%] pr-[6%] pt-[5%]">
+          <div className="px-[6%] mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span>
+              </h2>
+            </div>
           <SchoolCarousel school_card={schoolList}/>
         </div>
 
         {/* Top Rated Schools Based on Student Reviews */}
-          <div className="w-full pl-[6%] pr-[6%] pt-[15%]">
-          <h1>Top Rated Schools Based on Student Reviews</h1>
+          <div className="w-full pl-[6%] pr-[6%] pt-[5%]">
+          <div className="px-[6%] mb-8">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Top-Rated Schools <span className="text-[#FFDE59]">Based on Student Reviews</span>
+              </h2>
+            </div>
           <SchoolCarousel school_card={schoolList}/>
         </div>
       </main>
