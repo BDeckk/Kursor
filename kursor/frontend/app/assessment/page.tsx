@@ -39,12 +39,17 @@ export default function AssessmentPage() {
       if (answer) {
         // Example scoring rule: gikan 1-5 ang 4 kay (Likely) and 5 (Very Likely) or "Yes"
         if (answer >= 4) {
-          scores[q.category] += 1;
+          scores[q.category] += answer;
         }
       }
     });
 
+    const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    const top3 = sorted.slice(0, 3).map(([letter]) => letter).join("");
+
+    // Save both scores + top3
     localStorage.setItem('scores', JSON.stringify(scores));
+    localStorage.setItem('riasecCode', top3);
     router.push('/result');
   };
 
