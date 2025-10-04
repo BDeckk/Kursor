@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/supabaseClient";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-//Error Handling - gemini API key does not exist
 const geminiApiKey = process.env.GEMINI_API_KEY;
 if (!geminiApiKey) {
   console.error("❌ GEMINI_API_KEY is not set.");
 }
 
 const genAI = new GoogleGenerativeAI(geminiApiKey || "");
+
 interface Program {
   id: string;
   title: string;
@@ -17,7 +17,7 @@ interface Program {
   riasec_tags: string[];
 }
 
-// Prompting part
+// Improved prompt with JSON output format
 function buildPrompt(riasecCode: string, programs: Program[]): string {
   return `
 You are a career recommendation system.
@@ -28,25 +28,69 @@ RIASEC Code: ${riasecCode}
 Available Programs:
 ${programs
     .map(
-      (p) => `- Program: ${p.title}
-  School: ${p.school}
-  Description: ${p.description}
-  Tags: ${p.riasec_tags.join(", ")}`
+      (p, idx) => `${idx + 1}. Title: "${p.title}"
+   School: ${p.school}
+   Description: ${p.description}
+   RIASEC Tags: ${p.riasec_tags.join(", ")}`
     )
     .join("\n\n")}
 
-Based on the RIASEC code provided, suggest the top 10 programs from the list above.
-Format your response as a numbered list of program titles only.
-Example:
-1. Program Title A
-2. Program Title B
-3. Program Title C
+IMPORTANT: Based on the RIASEC code provided, suggest the top 10 programs from the list above.
+You MUST return ONLY the exact program titles as they appear above, nothing else.
+Format your response as a JSON array of exact titles from the list.
+
+Example format:
+["Program Title A", "Program Title B", "Program Title C"]
+
+Return ONLY the JSON array, no additional text.
 `;
+}
+
+// Normalize string for better matching
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^\w\s]/g, "");
+}
+
+// Better matching function
+function findMatchingPrograms(
+  geminiTitles: string[],
+  allPrograms: Program[]
+): Program[] {
+  const matched: Program[] = [];
+  
+  for (const geminiTitle of geminiTitles) {
+    const normalizedGemini = normalizeString(geminiTitle);
+    
+    // Try exact match first
+    let found = allPrograms.find(
+      (p) => normalizeString(p.title) === normalizedGemini
+    );
+    
+    // If no exact match, try fuzzy match
+    if (!found) {
+      found = allPrograms.find((p) => {
+        const normalizedProgram = normalizeString(p.title);
+        return (
+          normalizedProgram.includes(normalizedGemini) ||
+          normalizedGemini.includes(normalizedProgram)
+        );
+      });
+    }
+    
+    if (found && !matched.some((p) => p.id === found.id)) {
+      matched.push(found);
+    }
+  }
+  
+  return matched;
 }
 
 export async function POST(req: Request) {
   try {
-
     const { riasecCode }: { riasecCode: string } = await req.json();
     console.log("➡️ Received RIASEC code:", riasecCode);
 
@@ -57,6 +101,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // Fetch programs from Supabase
     const { data: programs, error } = await supabase
       .from("programs")
       .select("*")
@@ -77,6 +122,7 @@ export async function POST(req: Request) {
 
     console.log(`✅ Fetched ${programs.length} programs from Supabase.`);
 
+    // Build prompt
     const prompt = buildPrompt(riasecCode, programs);
 
     if (!geminiApiKey) {
@@ -87,31 +133,65 @@ export async function POST(req: Request) {
     }
 
     // Call Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     const result = await model.generateContent(prompt);
     const geminiResponseText = result.response.text();
-    console.log("✅ Gemini response:", geminiResponseText);
+    console.log("✅ Gemini raw response:", geminiResponseText);
 
-    // Parse Gemini output
-    const parsedRecommendations = geminiResponseText
-      .split("\n")
-      .map((line) => line.replace(/^\d+\.\s*/, "").trim())
-      .filter(Boolean);
+    // Parse Gemini response
+    let parsedTitles: string[] = [];
+    
+    try {
+      // Try to extract JSON array from response
+      const jsonMatch = geminiResponseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        parsedTitles = JSON.parse(jsonMatch[0]);
+        console.log("✅ Parsed JSON titles:", parsedTitles);
+      } else {
+        throw new Error("No JSON array found");
+      }
+    } catch (parseError) {
+      // Fallback: parse line by line
+      console.warn("⚠️ JSON parsing failed, using line-by-line parsing");
+      parsedTitles = geminiResponseText
+        .split("\n")
+        .map((line) => line.replace(/^\d+\.\s*/, "").trim())
+        .map((line) => line.replace(/^["']|["']$/g, "")) // Remove quotes
+        .filter((line) => line && line.length > 3);
+      console.log("✅ Parsed line titles:", parsedTitles);
+    }
 
-    // Match against Supabase only
-    const matchedPrograms = programs.filter((p) =>
-      parsedRecommendations.some((title) =>
-        p.title.toLowerCase().includes(title.toLowerCase())
-      )
-    );
+    // Match programs
+    const matchedPrograms = findMatchingPrograms(parsedTitles, programs);
+    console.log(`✅ Matched ${matchedPrograms.length} programs`);
 
-    // Return only Supabase-backed recommendations
+    // If we matched fewer than expected, log for debugging
+    if (matchedPrograms.length < parsedTitles.length) {
+      console.warn(
+        `⚠️ Only matched ${matchedPrograms.length}/${parsedTitles.length} programs`
+      );
+      console.warn("Unmatched titles:", 
+        parsedTitles.filter(
+          (title) => !matchedPrograms.some((p) => 
+            normalizeString(p.title) === normalizeString(title)
+          )
+        )
+      );
+    }
+
+    // Return recommendations
     return NextResponse.json({
-      recommendations: matchedPrograms.map((p) => ({
+      recommendations: matchedPrograms.slice(0, 10).map((p) => ({
+        id: p.id,
         title: p.title,
+        school: p.school,
         reason: p.description || "No description available",
       })),
       raw: geminiResponseText,
+      debug: {
+        parsedTitles,
+        matchedCount: matchedPrograms.length,
+      },
     });
   } catch (err: any) {
     console.error("❌ API error:", err);
