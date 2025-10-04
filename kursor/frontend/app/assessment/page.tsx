@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { questions } from "./question";
 import Navbar from "@/components/homepage-navbar";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,15 @@ export default function AssessmentPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
   const router = useRouter();
+
+  useEffect(() => {
+
+    setCurrentQuestion(0);
+    setAnswers({});
+    
+    localStorage.removeItem('scores');
+    localStorage.removeItem('riasecCode');
+  }, []);
 
   const handleAnswer = (questionId: number, value: number) => {
     setAnswers({ ...answers, [questionId]: value });
@@ -46,10 +55,8 @@ export default function AssessmentPage() {
     const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
     const top3 = sorted.slice(0, 3).map(([letter]) => letter).join("");
 
-    // Using in-memory storage instead of localStorage for Claude.ai compatibility
-    // In production, you would use: localStorage.setItem('scores', JSON.stringify(scores));
-    sessionStorage.setItem('scores', JSON.stringify(scores));
-    sessionStorage.setItem('riasecCode', top3);
+    localStorage.setItem('scores', JSON.stringify(scores));
+    localStorage.setItem('riasecCode', top3);
     router.push('/result');
   };
 
