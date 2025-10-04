@@ -17,7 +17,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="h-screen flex flex-col bg-white">
       {/* Navbar */}
       <header className="flex justify-between items-center h-20 pl-10 pr-20 fixed top-6 left-0 w-full z-50 bg-transparent">
         {/* Logo (not affected by blend mode) */}
@@ -30,7 +30,7 @@ export default function HomePage() {
         </div>
 
         {/* Nav links (only these invert depending on background) */}
-        <nav className="flex space-x-10 font-medium pr-20 mix-blend-difference text-white">
+        <nav className="flex space-x-10 font-medium font-outfit pr-20 mix-blend-difference text-white">
           <a
             href="#features"
             className="hover:text-yellow-500 font-semibold transition text-2xl"
@@ -48,47 +48,48 @@ export default function HomePage() {
 
 
       {/* Hero Section */}
-      <main className="flex flex-1 items-center justify-between relative overflow-hidden">
-        {/* Left Content */}
-        <div className="pl-40 max-w-3xl z-10">
-          <h1 className="text-4xl md:text-5xl font-extrabold leading-snug mb-6 text-gray-900">
-            The right school for <br /> 
-            the perfect program <br />
-            is <span className="text-yellow-500">within reach.</span>
-          </h1>
-          <p className="text-2lg text-gray-700 mb-8">
-            Find the right school for the right program with Kursor!
-          </p>
+      <main className="relative flex flex-1 items-center overflow-hidden pt-15">
+          {/* Text + overlap */}
+          <div className="pl-40 max-w-4xl relative z-20">
+            <h1 className="text-[55px] font-bold font-outfit leading-snug mb-2 text-gray-900">
+              The right school for <br /> 
+              the perfect program <br />
+              is <span className="text-[#FFD600]">within reach.</span>
+            </h1>
+            <p className="text-[25px] font-fredoka text-gray-700 mb-15">
+              Find the right school for the right program <br />
+              with Kursor!
+            </p>
 
-          <div className="flex space-x-4 pl-5">
-            <button 
-              onClick={handleGetStarted}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-xl px-6 py-3 shadow-md transition"
-            >
-              Get Started
-            </button>
-
-            <button
-              onClick={handleLogin}
-              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-xl px-6 py-3 shadow-md transition"
-            >
-              Log In
-            </button>
+            <div className="flex space-x-4 gap-6">
+              <button 
+                onClick={handleGetStarted}
+                className="w-50 bg-[#FFEB99] text-[18px] hover:bg-[#FFD600] text-black font-semibold rounded-xl px-6 py-3 shadow-md transition"
+              >
+                Get Started
+              </button>
+              <button
+                onClick={handleLogin}
+                className="w-50 bg-[#FFEB99] text-[18px] hover:bg-[#FFD600] text-black font-semibold rounded-xl px-6 py-3 shadow-md transition"
+              >
+                Log In
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Right Illustration */}
-        <div className="hidden md:flex flex-1 justify-center relative z-1">
-          <img
-            src="/career.svg"
-            alt="Hero illustration"
-            className="h-180 w-auto ml-30 pr-50"
-          />
-        </div>
+          {/* Right Illustration */}
+          <div className="absolute right-0 z-10 pr-23">
+            <img
+              src="/career.svg"
+              alt="Hero illustration"
+              className="h-[500px] w-auto"
+            />
+          </div>
 
-        {/* Background Rectangle */}
-        <div className="absolute w-[1021.04px] h-[1210.81px] left-[970px] top-[-350px] z-0 bg-[#FFDE59] rotate-[-20deg]"></div>
-      </main>
+          {/* Background Rectangle */}
+          <div className="absolute w-[1021.04px] h-[1210.81px] left-[970px] top-[-350px] z-0 bg-[#FFDE59] rotate-[-20deg]"></div>
+        </main>
+
 
       {/* Login Modal */}
       {showLoginModal && (
