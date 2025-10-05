@@ -2,6 +2,7 @@
 import Navbar from "@/components/homepage-navbar";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { UserAuth } from "@/Context/AuthContext";
 
 type RIASEC = "R" | "I" | "A" | "S" | "E" | "C";
 
@@ -20,6 +21,9 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const router = useRouter();
+
+  const { session } = UserAuth();
+  const user = session?.user;
 
   
   const meanings: Record<RIASEC, string> = {
@@ -120,7 +124,7 @@ export default function ResultPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1 max-w-xl">
               <h1 className="text-5xl font-bold text-gray-900 pl-8 mb-4">
-                Kursor Longakit
+                {user?.email || user?.id || "Guest User"}
               </h1>
               <p className="text-xl text-gray-800 leading-relaxed mb-6 pl-10 pr-15 pt-3 mb-10">
                 Nice job on accomplishing the assessment test! Now check your possible career/degree path based on the result of the test.
