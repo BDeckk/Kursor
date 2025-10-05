@@ -105,7 +105,7 @@ export default function ResultPage() {
     setShowResults(true);
     // Smooth scroll to results section
     setTimeout(() => {
-      const resultsSection = document.getElementById("results-section");
+      const resultsSection = document.getElementById("start-section");
       if (resultsSection) {
         resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
       }
@@ -164,8 +164,9 @@ export default function ResultPage() {
         {/* Results Section - Only shown after button click */}
         {showResults && (
           <div id="results-section">
+            <div id="start-section" className="h-20" />
             {/* Assessment Result Scores */}
-            <div className="border-4 border-yellow-400 rounded-3xl mt-20 p-8 mb-8 bg-gray-50">
+            <div className="border-4 border-yellow-400 rounded-3xl p-8 mb-8 bg-gray-50">
                 <h2 className="text-4xl font-bold text-gray-900 mb-8">Assessment Result</h2>
               
               {scores ? (

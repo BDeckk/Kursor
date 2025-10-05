@@ -27,7 +27,7 @@ export default function ProgramDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen">
         <Navbar />
       <h1 className="text-4xl font-bold mb-4 pt-[9%]">{program.title}</h1>
       {program.school && <p className="text-xl text-gray-600 mb-4">{program.school}</p>}
