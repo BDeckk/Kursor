@@ -1,4 +1,4 @@
-"use client"; // Add this if using App Router
+"use client"; 
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/supabaseClient";
@@ -29,14 +29,57 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const insertUser = async (userData) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([userData])
+        .select();
+
+      if (error) {
+        console.error("Insert user error:", error);
+        return { success: false, error };
+      }
+      return { success: true, data };
+    } catch (err) {
+      console.error("Unexpected error in insertUser:", err);
+      return { success: false, error: err };
+    }
+  };
+
+  const isUserExist = async (userID) => {
+    try {
+      const { data: existingUser, error: checkError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", userID)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking user:", checkError);
+        return { success: false, error: checkError };
+      }
+
+      if (existingUser) {
+        // User exists
+        return { success: true, user: existingUser };
+      }
+      
+      // User does not exist
+      return { success: false, user: null };
+    } catch (err) {
+      console.error("Unexpected error in isUserExist:", err);
+      return { success: false, error: err };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, loading }}>
+    <AuthContext.Provider value={{ session, loading, insertUser, isUserExist }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Hook to use the auth context
 export const UserAuth = () => {
   const context = useContext(AuthContext);
   

@@ -21,22 +21,53 @@ export default function SignupModal({
     setLoading(true);
 
     try {
+      // First, check if user already exists
+      const { data: existingUser } = await supabase.auth.signInWithPassword({
+        email,
+        password: "dummy-check", // Use a dummy password just to check
+      });
+
+      // If we get here without error, check for actual user existence
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (userData) {
+        setError("This email is already registered. Please log in instead.");
+        setLoading(false);
+        return;
+      }
+
+      // Proceed with signup
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`, 
-          // ✅ after clicking confirmation email → send back to homepage
+          emailRedirectTo: `${window.location.origin}/registration/`,
         },
       });
 
       if (error) {
-        setError(error.message);
-      } else {
-        setMessage(
-          "Check your email inbox for a confirmation link to activate your account."
-        );
+        if (error.message.includes("User already registered") || 
+            error.message.includes("already exists")) {
+          setError("This email is already registered. Please log in instead.");
+        } else {
+          setError(error.message);
+        }
+        return;
       }
+
+      // Check if user was actually created or already existed
+      if (data?.user && !data.user.identities?.length) {
+        setError("This email is already registered. Please log in instead.");
+        return;
+      }
+
+      setMessage(
+        "Check your email inbox for a confirmation link to activate your account."
+      );
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
