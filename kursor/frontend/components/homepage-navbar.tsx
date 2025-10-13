@@ -1,13 +1,56 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Bell, Home } from 'lucide-react';
+import { Bell, Home, User } from 'lucide-react';
+import { UserAuth } from "@/Context/AuthContext";
 
 export default function Navbar() {
   const router = useRouter();
+  const { session } = UserAuth();
+  const user = session?.user;
+  
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) {
+        console.log("No user ID found");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Fetching profile for user ID:", user.id);
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('full_name, profile_image_url')
+          .eq('id', user.id)
+          .maybeSingle(); // Changed from .single() to .maybeSingle()
+
+        if (error) {
+          console.error("Error fetching profile:", error);
+          console.error("Error details:", error.message, error.code);
+        } else if (data) {
+          console.log("Profile data fetched:", data);
+          setProfileData(data);
+        } else {
+          console.log("No profile found for this user");
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [user?.id]);
 
   const handleLogout = async () => {
     try {
@@ -20,11 +63,11 @@ export default function Navbar() {
 
   const handleProfile = () => {
     router.push("/profile"); 
-  }
+  };
 
   const handleSettings = () => {
     router.push("/settings"); 
-  }
+  };
 
   const handleHomeClick = () => {
     router.push("/dashboard");
@@ -34,12 +77,19 @@ export default function Navbar() {
     console.log("Notifications clicked");
   };
 
+  // Get first letter of name for fallback
+  const getInitial = () => {
+    if (profileData?.full_name) {
+      return profileData.full_name.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
   return (
     <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
-
-
-
-
       {/* Logo */}
       <div className="flex items-center ">
         <img
@@ -73,21 +123,40 @@ export default function Navbar() {
         <div className="relative">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center font-bold text-black hover:bg-yellow-500 transition-colors duration-200"
+            className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center font-bold text-black hover:bg-yellow-500 transition-colors duration-200 overflow-hidden"
           >
-            U
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            ) : profileData?.profile_image_url ? (
+              <img
+                src={profileData.profile_image_url}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to initial if image fails to load
+                  console.error("Failed to load image:", profileData.profile_image_url);
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = getInitial();
+                }}
+                onLoad={() => console.log("Profile image loaded successfully")}
+              />
+            ) : (
+              getInitial()
+            )}
           </button>
 
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-lg py-2 z-50">
               <button 
                 onClick={handleProfile}
-                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >
                 Profile
               </button>
               <button 
                 onClick={handleSettings}
-                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+              >
                 Settings
               </button>
               <button
