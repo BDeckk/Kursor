@@ -27,7 +27,6 @@ export default function KursorProfileForm() {
     profile_photo_url: "",
   });
 
-  // Update email when user session loads
   useEffect(() => {
     if (user?.email) {
       setFormData(prev => ({
@@ -54,13 +53,11 @@ export default function KursorProfileForm() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       setError("Please upload an image file.");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError("Image size should be less than 5MB.");
       return;
@@ -70,14 +67,12 @@ export default function KursorProfileForm() {
     setError("");
 
     try {
-      // Create unique file name
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `profile-photos/${fileName}`;
 
-      // Upload to Supabase Storage
       const { data, error: uploadError } = await supabase.storage
-        .from("profiles") // Make sure this bucket exists in your Supabase project
+        .from("profiles")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
@@ -85,7 +80,6 @@ export default function KursorProfileForm() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from("profiles")
         .getPublicUrl(filePath);
@@ -99,7 +93,6 @@ export default function KursorProfileForm() {
       });
       setSuccess("Photo uploaded successfully!");
       
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       console.error("Error uploading photo:", err);
@@ -115,21 +108,18 @@ export default function KursorProfileForm() {
       return;
     }
 
-    // Profile Validation
     const use_result = await isUserExist(user?.id);
     if (use_result.success) {
       setError("You already have a profile. You cannot submit again.");
       return;
     }
 
-    // Validation
     if (!formData.full_name || !formData.email || !formData.birthdate || !formData.gender || !formData.address || !formData.age) {
       console.log(formData);
       setError("Please fill in all required fields.");
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("Please enter a valid email address.");
@@ -177,190 +167,199 @@ export default function KursorProfileForm() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl p-8">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-8">
-          <img
-            src="/Kursor.png"
-            alt="Kursor logo"
-            className="h-70 w-auto pt-1"
+    <div className="min-h-screen bg-white flex">
+      {/* Left Side - Image (45% width) */}
+      <div className="w-[55%] flex flex-col">
+        {/* Logo in top left */}
+        <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
+          {/* Logo */}
+          <div className="flex items-center ">
+            <img
+              src="/Kursor.png"
+              alt="Kursor logo"
+              className="h-70 w-auto pt-1"
+            />
+          </div>
+        </header>
+        
+        {/* Left Image */}
+        <div className="flex-1 flex items-center">
+          <img 
+            src="/registration-career.png" 
+            alt="Registration illustration" 
+            className="w-full max-w-[780px] h-auto object-contain -mt-20"
           />
         </div>
+      </div>
 
-        <div className="grid md:grid-cols-2 gap-12">
-          {/* Left side image */}
-          <div className="flex items-center justify-center">
-            <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
-              <div className="text-gray-400 text-center">
-                <img src={'/registration-career.png'} alt="Left Side Image"/>
-              </div>
-            </div>
+      {/* Right Side - Form (55% width) */}
+      <div className="w-[45%] flex items-center justify-center">
+        <div className="w-[600px] max-w-[600px]">
+          {/* Profile Photo Upload */}
+          <div className="flex justify-center mt-25 mb-8">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={handlePhotoClick}
+              disabled={uploading}
+              className="w-40 h-40 rounded-full border-4 border-yellow-400 bg-white hover:bg-gray-50 transition-colors flex items-center justify-center group overflow-hidden relative"
+            >
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Profile preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("Image failed to load:", photoUrl);
+                    setError("Failed to load profile image. Please try again.");
+                    setPhotoUrl(null);
+                  }}
+                  onLoad={() => console.log("Image loaded successfully:", photoUrl)}
+                />
+              ) : (
+                <Upload className={`w-10 h-10 text-gray-400 group-hover:text-gray-600 ${uploading ? 'animate-pulse' : ''}`} />
+              )}
+              {uploading && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+            </button>
           </div>
 
-          {/* Right side form */}
-          <div className="flex flex-col justify-center">
-            <div className="flex justify-end mb-8">
+          {/* Form Fields */}
+          <div className="space-y-5">
+            {/* Full Name */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Full Name *
+              </label>
               <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                className="hidden"
+                type="text"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleChange}
+                className="w-full px-6 py-3 border-2 font-fredoka border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-transparent"
+                placeholder="Enter your full name"
               />
-              <button
-                type="button"
-                onClick={handlePhotoClick}
-                disabled={uploading}
-                className="w-20 h-20 rounded-full border-4 border-yellow-400 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center group overflow-hidden relative"
+            </div>
+
+            {/* Email */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Email Address *
+              </label>
+              <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-[#FFFFFF] text-gray-500 cursor-not-allowed">
+                {user?.email}
+              </div>
+              <p className="text-xs text-gray-400 mt-1 pl-100">Email is auto-filled from your account</p>
+            </div>
+
+            {/* Birthdate */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Birthdate *
+              </label>
+              <input
+                type="date"
+                name="birthdate"
+                value={formData.birthdate}
+                onChange={handleChange}
+                className="w-full px-6 py-3 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+              />
+            </div>
+
+            {/* Age */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Age *
+              </label>
+              <input
+                type="number"
+                name="age"
+                value={formData.age || ""}
+                onChange={handleChange}
+                min="0"
+                max="100"
+                className="w-full px-6 py-3 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+                placeholder="Enter your age"
+              />
+            </div>
+
+            {/* Gender */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Gender *
+              </label>
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="w-full px-6 py-3 pr-10 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer appearance-none"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1.4rem center',
+                  backgroundSize: '20px'
+                }}
               >
-                {photoUrl ? (
-                  <img
-                    src={photoUrl}
-                    alt="Profile preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error("Image failed to load:", photoUrl);
-                      setError("Failed to load profile image. Please try again.");
-                      setPhotoUrl(null);
-                    }}
-                    onLoad={() => console.log("Image loaded successfully:", photoUrl)}
-                  />
-                ) : (
-                  <Upload className={`w-8 h-8 text-gray-400 group-hover:text-gray-600 ${uploading ? 'animate-pulse' : ''}`} />
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
+                <option value="">Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+                <option value="prefer-not-to-say">Prefer not to say</option>
+              </select>
+            </div>
+
+            {/* Address */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Address *
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-6 py-3 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+                placeholder="Enter your address"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-4 flex justify-center">
+              <button
+                onClick={handleSubmit}
+                disabled={uploading}
+                className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-bold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-base"
+              >
+                {uploading ? "Uploading..." : "Submit"}
               </button>
-              {photoUrl && (
-                <p className="text-xs text-gray-400 text-right mt-1">Photo uploaded</p>
-              )}
             </div>
 
-            <div className="space-y-6">
-              {/* Full Name */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  className="w-full px-6 py-4 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
-                  placeholder="Enter your full name"
-                />
+            {/* Success Message */}
+            {success && (
+              <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4">
+                <p className="text-green-700 text-center font-semibold">
+                  {success}
+                </p>
               </div>
+            )}
 
-              {/* Email */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Email Address *
-                </label>
-                <h1 className="w-full px-6 py-4 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-500 cursor-not-allowed">
-                  {user?.email}
-                </h1>
-                <p className="text-xs text-gray-400 mt-1">Email is auto-filled from your account</p>
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4">
+                <p className="text-red-700 text-center font-semibold">
+                  {error}
+                </p>
               </div>
-
-              {/* Birthdate */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Birthdate *
-                </label>
-                <input
-                  type="date"
-                  name="birthdate"
-                  value={formData.birthdate}
-                  onChange={handleChange}
-                  className="w-full px-6 py-4 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
-                />
-              </div>
-
-              {/* Age */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Age *
-                </label>
-                <input
-                  type="number"
-                  name="age"
-                  value={formData.age || ""}
-                  onChange={handleChange}
-                  min="0"
-                  max="100"
-                  className="w-full px-6 py-4 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
-                  placeholder="Enter your age"
-                />
-              </div>
-
-              {/* Gender */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Gender *
-                </label>
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  className="w-full px-6 py-4 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer"
-                >
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                  <option value="prefer-not-to-say">Prefer not to say</option>
-                </select>
-              </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-gray-500 text-sm font-medium mb-2">
-                  Address *
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full px-6 py-4 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
-                  placeholder="Enter your address"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-4">
-                <button
-                  onClick={handleSubmit}
-                  disabled={uploading}
-                  className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-4 rounded-full transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {uploading ? "Uploading..." : "Submit"}
-                </button>
-              </div>
-
-              {/* Success Message */}
-              {success && (
-                <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4">
-                  <p className="text-green-700 text-center font-semibold">
-                    {success}
-                  </p>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4">
-                  <p className="text-red-700 text-center font-semibold">
-                    {error}
-                  </p>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
