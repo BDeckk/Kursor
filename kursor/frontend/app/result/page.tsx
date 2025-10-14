@@ -13,6 +13,14 @@ interface Recommendation {
   reason: string;
 }
 
+
+  interface Profile {
+    id: string;
+    full_name?: string;
+    profile_image_url: string;
+    email?: string;
+  }
+
 export default function ResultPage() {
   const [scores, setScores] = useState<Record<RIASEC, number> | null>(null);
   const [riasecCode, setRiasecCode] = useState<string | null>(null);
@@ -20,11 +28,11 @@ export default function ResultPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [profileData, setProfileData] = useState<Profile | null>(null);
   const router = useRouter();
 
-  const { session } = UserAuth();
+  const { session , getProfile} = UserAuth();
   const user = session?.user;
-
   
   const meanings: Record<RIASEC, string> = {
     R: "Realistic",
@@ -34,6 +42,20 @@ export default function ResultPage() {
     E: "Enterprising", 
     C: "Conventional",
   };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const loadUserProfile = async () => {
+      const data = await getProfile(user.id);
+      if (data) {
+        setProfileData(data);
+        console.log("📄 User profile:", data);
+      }
+    };
+
+    loadUserProfile();
+  }, [user, getProfile]);
 
   // Load scores from localStorage
   useEffect(() => {
@@ -112,6 +134,16 @@ export default function ResultPage() {
     }, 100);
   };
 
+  const getInitial = () => {
+    if (profileData?.full_name) {
+      return profileData.full_name.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
   return (
     <div className="min-h-screen bg-white-100 ">
       <Navbar />
@@ -124,7 +156,7 @@ export default function ResultPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1 max-w-xl">
               <h1 className="text-5xl font-bold text-gray-900 pl-8 mb-4">
-                {user?.email || user?.id || "Guest User"}
+                {profileData?.full_name || user?.email || "Guest User"}
               </h1>
               <p className="text-xl text-gray-800 leading-relaxed mb-6 pl-10 pr-15 pt-3 mb-10">
                 Nice job on accomplishing the assessment test! Now check your possible career/degree path based on the result of the test.
@@ -139,15 +171,28 @@ export default function ResultPage() {
             
             <div className="relative">
               {/* Large Profile Picture */}
-              <div className="w-80 h-80 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden">
-                <img 
-                  src="" 
-                  alt="User Profile"
-                  className="w-full h-full object-cover"
-                />
+               <div className="w-80 h-80 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden">
+               {loading ? (
+                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                    ) : profileData?.profile_image_url ? (
+                      <img
+                      src={profileData.profile_image_url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        //Error handling
+                        console.error("Failed to load image:", profileData.profile_image_url);
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = getInitial();
+                      }}
+                      onLoad={() => console.log("Profile image loaded successfully")}
+                    />
+                      ) : (
+                    getInitial()
+                  )}
+                  </div>
               </div>
             </div>
-          </div>
           
           {/* Small Illustration */}
           <div className="absolute -bottom-25 -right-6 w-60 h-60">
