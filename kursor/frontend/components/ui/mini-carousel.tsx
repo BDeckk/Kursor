@@ -132,7 +132,7 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
             className={`h-2 rounded-full transition-all duration-200 ${
               currentIndex === index 
                 ? 'bg-yellow-500 w-8' 
-                : 'bg-gray-300 w-2 hover:bg-gray-400'
+                : 'bg-[#FFFFFF] w-2 hover:bg-gray-200'
             }`}
           />
         ))}
