@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import Navbar from "@/components/homepage-navbar";
 import { useRouter } from "next/navigation";
 import HomeCards from "@/components/ui/home_carousel";
@@ -11,11 +11,17 @@ import { SchoolCarousel } from "@/components/ui/school-carousel";
 export default function DashboardPage() {
 
   const router = useRouter(); 
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    // Trigger animation after component mounts
+    setTimeout(() => setIsVisible(true), 100);
+  }, []);
 
    //Temporary! Carousel slides content - need some adjustments, can insert the contents here : kanang first carousel
   const slides = [
     {
-      image: "/homepage_carousel/bg-carousel.png"
+      image: "/homepage_carousel/carousel3.png"
     },
     {
       image: "/homepage_carousel/carousel2.png"
@@ -112,7 +118,11 @@ export default function DashboardPage() {
       <main className="pb-1">
 
         {/* Carousel Section */}
-        <div className="mb-9 pl-[19%] pr-[19%] pt-[7%]">
+        <div 
+          className={`mb-9 pl-[19%] pr-[19%] pt-[7%] transition-all duration-700 ease-out ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'
+          }`}
+        >
          <HomeCards slides={slides}/>
         </div>
 
@@ -122,7 +132,11 @@ export default function DashboardPage() {
           {/* Seek Guidance Card */}
           <button 
             onClick={handleAiClick}
-            className="bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-300 cursor-pointer text-center relative group">
+            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ transitionDelay: '200ms' }}
+          >
               <div className="absolute w-[200px] h-[200px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 z-0"></div>
               
               <img 
@@ -139,8 +153,13 @@ export default function DashboardPage() {
           </button>
 
           {/* Find Perfect Career Card */}
-          <button onClick={handleAssessmentClick} 
-            className="bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-300 cursor-pointer text-center relative group">
+          <button 
+            onClick={handleAssessmentClick} 
+            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ transitionDelay: '300ms' }}
+          >
               <div className="absolute w-[200px] h-[200px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 top-6 z-0"></div>
              
               <img 
@@ -157,8 +176,13 @@ export default function DashboardPage() {
           </button>
 
           {/* Browse Schools Card */}
-          <button onClick={handleSchoolClick} 
-            className="bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-300 cursor-pointer text-center relative group">
+          <button 
+            onClick={handleSchoolClick} 
+            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ transitionDelay: '400ms' }}
+          >
             <div className="absolute w-[200px] h-[208px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 top-6 z-0"></div>
 
             <img 
@@ -178,7 +202,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Fields that might interest you */}
-        <div className="w-full pt-[5%]">
+        <div 
+          className={`w-full pt-[5%] transition-all duration-700 ease-out ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+          style={{ transitionDelay: '500ms' }}
+        >
           {/* Yellow background section with title and carousel inside */}
           <div className="bg-[#FFDE59] py-12 w-full">
             {/* Title inside yellow background */}
@@ -192,7 +221,12 @@ export default function DashboardPage() {
         </div>
 
          {/*School - mini carousel - thingy */}
-          <div className="w-full pl-[6%] pr-[6%] pt-[2%] mt-5">
+          <div 
+            className={`w-full pl-[6%] pr-[6%] pt-[2%] mt-5 transition-all duration-700 ease-out ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ transitionDelay: '600ms' }}
+          >
           <div className="px-[6%] mb-8">
               <h2 className="text-3xl font-bold font-outfit text-gray-800 text-right pl-10" >
                 Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span>
@@ -203,7 +237,12 @@ export default function DashboardPage() {
 
 
         {/* Top Rated Schools Based on Student Reviews */}
-          <div className="w-full pt-[3%] bg-[#FFDE59] py-12 w-full mt-20 pb-[2%]">
+          <div 
+            className={`w-full pt-[3%] bg-[#FFDE59] py-12 w-full mt-20 pb-[2%] transition-all duration-700 ease-out ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+            style={{ transitionDelay: '700ms' }}
+          >
           <div className="px-[6%] mb-8">
               <h2 className="text-3xl font-bold font-outfit text-gray-800 mb-10 pl-10">
                 Top-Rated Schools <span className="text-white">Based on Student Reviews</span>
@@ -214,4 +253,4 @@ export default function DashboardPage() {
       </main>
     </div>
   );
-}
+} 
