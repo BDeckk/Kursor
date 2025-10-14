@@ -133,7 +133,7 @@ export default function Navbar() {
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  // Fallback to initial if image fails to load
+                  // error handling
                   console.error("Failed to load image:", profileData.profile_image_url);
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.parentElement!.innerHTML = getInitial();

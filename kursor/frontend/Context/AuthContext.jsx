@@ -73,8 +73,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  //retrieve user profile (users)
+  const getProfile = async (userId) => {
+    if (!userId) return null;
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error("❌ Error fetching profile:", err);
+      return null;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ session, loading, insertUser, isUserExist }}>
+    <AuthContext.Provider value={{ session, loading, insertUser, isUserExist, getProfile }}>
       {children}
     </AuthContext.Provider>
   );
