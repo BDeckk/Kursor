@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/homepage-navbar";
 import { supabase } from "@/supabaseClient";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
@@ -31,6 +31,7 @@ export default function ProgramDetailsPage() {
   const [isVisible, setIsVisible] = useState(false);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const programId = searchParams.get("id");
 
   // Animate section visibility
@@ -97,13 +98,36 @@ export default function ProgramDetailsPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      
-      {/* Top Banner - Image with Yellow Overlay and Title */}
       <div 
-        className={`w-full pt-[5%] mb-10 transition-all duration-700 ease-out ${
+        className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
         }`}
       >
+      {/* Back Button */}
+      <div className="fixed top-24 left-3 z-1">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 px-4 py-2 bg-transparent transition-all duration-200"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+        </button>
+      </div>
+      
+      {/* Top Banner - Image with Yellow Overlay and Title */}
+      
         <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
           {/* Background Image Container */}
           <div className="relative w-full overflow-hidden">
@@ -126,7 +150,7 @@ export default function ProgramDetailsPage() {
 
       {/* Yellow Stripe Below Banner */}
       <div 
-        className={`w-full h-8 bg-[#FFDE59] transition-all duration-700 ease-out ${
+        className={`w-full h-10 bg-[#FFDE59] transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
         }`}
         style={{ transitionDelay: "200ms" }}

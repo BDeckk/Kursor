@@ -57,127 +57,79 @@ export default function ResultPage() {
     loadUserProfile();
   }, [user, getProfile]);
 
-  // Load scores from localStorage
   // Load scores and cached results
-useEffect(() => {
-  try {
-    const storedScores = localStorage.getItem("scores");
-    const storedCode = localStorage.getItem("riasecCode");
-    const storedRecommendations = localStorage.getItem("recommendations");
-    const storedGeneratedCode = localStorage.getItem("generatedForCode");
-
-    if (storedScores) setScores(JSON.parse(storedScores));
-    if (storedCode) setRiasecCode(storedCode);
-
-    // Load cached recommendations only if they match this code
-    if (
-      storedRecommendations &&
-      storedGeneratedCode &&
-      storedGeneratedCode === storedCode
-    ) {
-      setRecommendations(JSON.parse(storedRecommendations));
-      setHasGeneratedRecommendations(true);
-      console.log("✅ Loaded cached recommendations for this code");
-    }
-  } catch (error) {
-    console.error("Failed to parse stored data:", error);
-    setError("Failed to load assessment results");
-  }
-}, []);
-
-// Fetch recommendations only once per unique code
-useEffect(() => {
-  if (!riasecCode) return;
-
-  const alreadyGeneratedForCode =
-    localStorage.getItem("generatedForCode") === riasecCode;
-
-  if (hasGeneratedRecommendations || alreadyGeneratedForCode) {
-    console.log("⚙️ Recommendations already generated for this code");
-    return;
-  }
-
-  const fetchRecommendations = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      console.log("🔄 Fetching recommendations for:", riasecCode);
-
-      const res = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ riasecCode }),
-      });
-
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-
-      const data = await res.json();
-      console.log("📥 API Response:", data);
-
-      if (data.recommendations && Array.isArray(data.recommendations)) {
-        setRecommendations(data.recommendations);
-        setHasGeneratedRecommendations(true);
-
-        // Persist results in localStorage
-        localStorage.setItem("recommendations", JSON.stringify(data.recommendations));
-        localStorage.setItem("generatedForCode", riasecCode);
-        localStorage.setItem("hasGeneratedRecommendations", "true");
-
-        console.log(`✅ Stored ${data.recommendations.length} recommendations`);
-      } else {
-        throw new Error("Unexpected response format");
-      }
-    } catch (error: any) {
-      console.error("❌ Failed to fetch recommendations:", error);
-      setError(error.message || "Failed to load recommendations");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchRecommendations();
-}, [riasecCode, hasGeneratedRecommendations]);
-
-  // Fetch recommendations - ONLY ONCE
   useEffect(() => {
-    if (!riasecCode || hasGeneratedRecommendations) return;
+    try {
+      const storedScores = localStorage.getItem("scores");
+      const storedCode = localStorage.getItem("riasecCode");
+      const storedRecommendations = localStorage.getItem("recommendations");
+      const storedGeneratedCode = localStorage.getItem("generatedForCode");
+
+      if (storedScores) setScores(JSON.parse(storedScores));
+      if (storedCode) setRiasecCode(storedCode);
+
+      // Load cached recommendations only if they match this code
+      if (
+        storedRecommendations &&
+        storedGeneratedCode &&
+        storedGeneratedCode === storedCode
+      ) {
+        setRecommendations(JSON.parse(storedRecommendations));
+        setHasGeneratedRecommendations(true);
+        console.log("✅ Loaded cached recommendations for this code");
+      }
+    } catch (error) {
+      console.error("Failed to parse stored data:", error);
+      setError("Failed to load assessment results");
+    }
+  }, []);
+
+  // Fetch recommendations only once per unique code
+  useEffect(() => {
+    if (!riasecCode) return;
+
+    const alreadyGeneratedForCode =
+      localStorage.getItem("generatedForCode") === riasecCode;
+
+    if (hasGeneratedRecommendations || alreadyGeneratedForCode) {
+      console.log("⚙️ Recommendations already generated for this code");
+      return;
+    }
 
     const fetchRecommendations = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         console.log("🔄 Fetching recommendations for:", riasecCode);
-        
+
         const res = await fetch("/api/recommend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ riasecCode }),
         });
 
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status} ${res.statusText}`);
-        }
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
 
         const data = await res.json();
         console.log("📥 API Response:", data);
 
-        // Handle the response
         if (data.recommendations && Array.isArray(data.recommendations)) {
           setRecommendations(data.recommendations);
           setHasGeneratedRecommendations(true);
-          console.log(`✅ Loaded ${data.recommendations.length} recommendations`);
-        } else if (data.error) {
-          throw new Error(data.error);
+
+          // Persist results in localStorage
+          localStorage.setItem("recommendations", JSON.stringify(data.recommendations));
+          localStorage.setItem("generatedForCode", riasecCode);
+          localStorage.setItem("hasGeneratedRecommendations", "true");
+
+          console.log(`✅ Stored ${data.recommendations.length} recommendations`);
         } else {
-          console.warn("⚠️ Unexpected response format:", data);
-          setRecommendations([]);
+          throw new Error("Unexpected response format");
         }
       } catch (error: any) {
         console.error("❌ Failed to fetch recommendations:", error);
         setError(error.message || "Failed to load recommendations");
-        setRecommendations([]);
       } finally {
         setLoading(false);
       }
@@ -215,57 +167,54 @@ useEffect(() => {
 
         {/* User Profile */}
         <div className="bg-[#F5D555] to-yellow-400 p-7 rounded-3xl">
-        <div className="bg-[#FFDE59] rounded-3xl p-8 pt-10 pb-15 border-4 border-white relative overflow-visible">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 max-w-xl">
-              <h1 className="text-5xl font-bold text-gray-900 pl-8 mb-4">
-                {profileData?.full_name || user?.email || "Guest User"}
-              </h1>
-              <p className="text-xl text-gray-800 leading-relaxed mb-6 pl-10 pr-15 pt-3 mb-10">
-                Nice job on accomplishing the assessment test! Now check your possible career/degree path based on the result of the test.
-              </p>
-              <button 
-                onClick={handleSeeResults}
-                className="bg-yellow-200 hover:bg-yellow-100 text-gray-900 font-bold py-4 px-8 ml-15 rounded-full text-2xl transition-all shadow-lg hover:shadow-xl"
-              >
-                See Results →
-              </button>
-            </div>
-            
-            <div className="relative">
-              {/* Large Profile Picture */}
-               <div className="w-80 h-80 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden">
-               {loading ? (
-                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                    ) : profileData?.profile_image_url ? (
-                      <img
+          <div className="bg-[#FFDE59] rounded-3xl p-8 pt-10 pb-15 border-4 border-white relative overflow-visible">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 max-w-xl">
+                <h1 className="text-5xl font-bold text-gray-900 pl-8 mb-4">
+                  { profileData?.full_name }
+                </h1>
+                <p className="text-xl text-gray-800 leading-relaxed mb-6 pl-10 pr-15 pt-3 mb-10">
+                  Nice job on accomplishing the assessment test! Now check your possible career/degree path based on the result of the test.
+                </p>
+                <button 
+                  onClick={handleSeeResults}
+                  className="bg-yellow-200 hover:bg-yellow-100 text-gray-900 font-bold py-4 px-8 ml-15 rounded-full text-2xl transition-all shadow-lg hover:shadow-xl"
+                >
+                  See Results →
+                </button>
+              </div>
+              
+              <div className="relative">
+                {/* Large Profile Picture */}
+                <div className="w-80 h-80 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  ) : profileData?.profile_image_url ? (
+                    <img
                       src={profileData.profile_image_url}
                       alt="Profile"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        //Error handling
                         console.error("Failed to load image:", profileData.profile_image_url);
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.innerHTML = getInitial();
                       }}
                       onLoad={() => console.log("Profile image loaded successfully")}
                     />
-                      ) : (
-                    getInitial()
+                  ) : (
+                    <span className="text-6xl font-bold text-gray-600">{getInitial()}</span>
                   )}
-                  </div>
+                </div>
               </div>
             </div>
           
-          {/* Small Illustration */}
-          <div className="absolute -bottom-25 -right-6 w-60 h-60">
-            <img 
-              src="/result-decor.png" 
-              alt="Illustration"
-              className="w-full h-auto object-contain"
-            />
+            {/* Small Illustration */}
+            <div className="absolute -bottom-25 -right-6 w-60 h-60">
+              <img 
+                src="/result-decor.png" 
+                alt="Illustration"
+                className="w-full h-auto object-contain"
+              />
+            </div>
           </div>
-        </div>
         </div>
         
 
@@ -275,7 +224,7 @@ useEffect(() => {
             <div id="start-section" className="h-20" />
             {/* Assessment Result Scores */}
             <div className="border-4 border-yellow-400 rounded-3xl p-8 mb-8 bg-gray-50">
-                <h2 className="text-4xl font-bold text-gray-900 mb-8">Assessment Result</h2>
+              <h2 className="text-4xl font-bold text-gray-900 mb-8">Assessment Result</h2>
               
               {scores ? (
                 <div className="bg-[#FCF8EB] rounded-2xl p-8 border-4 border-white">
@@ -285,7 +234,7 @@ useEffect(() => {
                       .map(([letter, value]) => (
                         <div key={letter} className="flex items-center gap-2">
                           <span className="text-xl font-bold text-gray-900 w-40 flex items-center">
-                            {letter} - {meanings[letter] || ""}
+                            {letter} - {meanings[letter as RIASEC] || ""}
                           </span>
                           <div className="flex-1 bg-gray-200 rounded-lg h-12 relative overflow-hidden">
                             <div
@@ -294,7 +243,7 @@ useEffect(() => {
                                 width: `${Math.min((value as number / 30) * 100, 100)}%` 
                               }}
                             >
-                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
