@@ -1,67 +1,86 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "@/supabaseClient";
 
-export async function GET(request: Request) {
-  console.log("🎨 AI-powered image search API hit!");
-
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("query");
-
-  if (!query) {
-    return NextResponse.json({ error: "Missing query" }, { status: 400 });
-  }
+export async function POST(request: Request) {
+  console.log("📤 Upload image API route hit!");
 
   try {
-    console.log("🔍 Original query:", query);
-    let keywords = query;
+    const body = await request.json();
+    const { imageUrl, fileName, programId } = body;
 
-    // ✨ Enhance keywords using Gemini if available
-    if (process.env.GEMINI_API_KEY) {
-      try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-
-        const prompt = `Given this academic program name: "${query}", 
-        suggest 3-5 relevant keywords for finding a professional stock photo.
-        Return only comma-separated keywords.`;
-
-        const result = await model.generateContent(prompt);
-        keywords = result.response.text().trim();
-        console.log("✨ AI-enhanced keywords:", keywords);
-      } catch (aiError) {
-        console.warn("⚠️ Gemini failed, using plain query:", aiError);
-      }
+    if (!imageUrl || !fileName) {
+      return NextResponse.json(
+        { error: "Missing imageUrl or fileName" },
+        { status: 400 }
+      );
     }
 
-    // 🖼️ Fetch image from Unsplash API
-    const unsplashRes = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(
-        keywords
-      )}&orientation=landscape&client_id=${process.env.UNSPLASH_ACCESS_KEY}`
-    );
+    console.log("📥 Image URL:", imageUrl);
+    console.log("📝 File name:", fileName);
+    console.log("🆔 Program ID:", programId);
 
-    if (!unsplashRes.ok) {
-      const errorText = await unsplashRes.text();
-      console.error("❌ Unsplash API error:", errorText);
-      return NextResponse.json({ error: "Unsplash API failed" }, { status: 500 });
+    console.log("⬇️ Downloading image from Pexels...");
+    const imgResponse = await fetch(imageUrl);
+
+    if (!imgResponse.ok) {
+      throw new Error(`Failed to download: ${imgResponse.status}`);
     }
 
-    const unsplashData = await unsplashRes.json();
-    const photoUrl = unsplashData.urls?.regular;
+    const imageBuffer = await imgResponse.arrayBuffer();
+    console.log("✅ Downloaded:", (imageBuffer.byteLength / 1024).toFixed(2), "KB");
 
-    if (!photoUrl) {
-      console.warn("⚠️ No image found, returning placeholder");
-      return NextResponse.json({
-        photoUrl: "https://placehold.co/800x400/e2e8f0/64748b?text=No+Image+Found",
+    console.log("⬆️ Uploading to Supabase Storage...");
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("course-images")
+      .upload(fileName, imageBuffer, {
+        contentType: "image/jpeg",
+        upsert: true, // This replaces if exists
       });
+
+    if (uploadError) {
+      console.error("❌ Upload error:", uploadError);
+      return NextResponse.json(
+        { error: "Upload failed", details: uploadError.message },
+        { status: 500 }
+      );
     }
 
-    console.log("✅ Got Unsplash image:", photoUrl);
-    return NextResponse.json({ photoUrl });
-  } catch (error) {
-    console.error("❌ Error in generate-image:", error);
+    console.log("✅ Upload successful:", uploadData?.path);
+
+    // Get public URL
+    const { data } = supabase.storage
+      .from("course-images")
+      .getPublicUrl(fileName);
+
+    const publicUrl = data.publicUrl;
+    console.log("🔗 Public URL:", publicUrl);
+
+    // Update database with image URL
+    if (programId) {
+      console.log("💾 Updating programs table...");
+      const { data: updateData, error: updateError } = await supabase
+        .from("programs")
+        .update({ image_url: publicUrl })
+        .eq("id", programId)
+        .select();
+
+      if (updateError) {
+        console.error("❌ Database update failed:", updateError);
+        return NextResponse.json(
+          { error: "Image uploaded but database update failed", details: updateError.message },
+          { status: 500 }
+        );
+      }
+
+      console.log("✅ Database updated successfully:", updateData);
+    }
+
+    return NextResponse.json({ publicUrl });
+  } catch (err) {
+    console.error("❌ Upload failed:", err);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to fetch image" },
+      { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 500 }
     );
   }
