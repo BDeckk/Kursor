@@ -12,6 +12,7 @@ export default function AssessmentPage() {
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
   const router = useRouter();
 
+  //Resets assessment result
   useEffect(() => {
 
     setCurrentQuestion(0);
@@ -19,6 +20,9 @@ export default function AssessmentPage() {
     
     localStorage.removeItem('scores');
     localStorage.removeItem('riasecCode');
+    localStorage.removeItem("recommendations");
+    localStorage.removeItem("hasGeneratedRecommendations");
+
   }, []);
 
   const handleAnswer = (questionId: number, value: number) => {

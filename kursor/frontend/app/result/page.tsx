@@ -13,13 +13,12 @@ interface Recommendation {
   reason: string;
 }
 
-
-  interface Profile {
-    id: string;
-    full_name?: string;
-    profile_image_url: string;
-    email?: string;
-  }
+interface Profile {
+  id: string;
+  full_name?: string;
+  profile_image_url: string;
+  email?: string;
+}
 
 export default function ResultPage() {
   const [scores, setScores] = useState<Record<RIASEC, number> | null>(null);
@@ -29,6 +28,7 @@ export default function ResultPage() {
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [profileData, setProfileData] = useState<Profile | null>(null);
+  const [hasGeneratedRecommendations, setHasGeneratedRecommendations] = useState(false);
   const router = useRouter();
 
   const { session , getProfile} = UserAuth();
@@ -58,28 +58,90 @@ export default function ResultPage() {
   }, [user, getProfile]);
 
   // Load scores from localStorage
-  useEffect(() => {
-    try {
-      const storedScores = localStorage.getItem("scores");
-      const storedCode = localStorage.getItem("riasecCode");
-      
-      if (storedScores) {
-        setScores(JSON.parse(storedScores));
-      }
-      if (storedCode) {
-        setRiasecCode(storedCode);
-      } else {
-        console.warn("⚠️ No RIASEC code found");
-      }
-    } catch (error) {
-      console.error("Failed to parse stored data:", error);
-      setError("Failed to load assessment results");
-    }
-  }, []);
+  // Load scores and cached results
+useEffect(() => {
+  try {
+    const storedScores = localStorage.getItem("scores");
+    const storedCode = localStorage.getItem("riasecCode");
+    const storedRecommendations = localStorage.getItem("recommendations");
+    const storedGeneratedCode = localStorage.getItem("generatedForCode");
 
-  // Fetch recommendations
+    if (storedScores) setScores(JSON.parse(storedScores));
+    if (storedCode) setRiasecCode(storedCode);
+
+    // Load cached recommendations only if they match this code
+    if (
+      storedRecommendations &&
+      storedGeneratedCode &&
+      storedGeneratedCode === storedCode
+    ) {
+      setRecommendations(JSON.parse(storedRecommendations));
+      setHasGeneratedRecommendations(true);
+      console.log("✅ Loaded cached recommendations for this code");
+    }
+  } catch (error) {
+    console.error("Failed to parse stored data:", error);
+    setError("Failed to load assessment results");
+  }
+}, []);
+
+// Fetch recommendations only once per unique code
+useEffect(() => {
+  if (!riasecCode) return;
+
+  const alreadyGeneratedForCode =
+    localStorage.getItem("generatedForCode") === riasecCode;
+
+  if (hasGeneratedRecommendations || alreadyGeneratedForCode) {
+    console.log("⚙️ Recommendations already generated for this code");
+    return;
+  }
+
+  const fetchRecommendations = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log("🔄 Fetching recommendations for:", riasecCode);
+
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ riasecCode }),
+      });
+
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+
+      const data = await res.json();
+      console.log("📥 API Response:", data);
+
+      if (data.recommendations && Array.isArray(data.recommendations)) {
+        setRecommendations(data.recommendations);
+        setHasGeneratedRecommendations(true);
+
+        // Persist results in localStorage
+        localStorage.setItem("recommendations", JSON.stringify(data.recommendations));
+        localStorage.setItem("generatedForCode", riasecCode);
+        localStorage.setItem("hasGeneratedRecommendations", "true");
+
+        console.log(`✅ Stored ${data.recommendations.length} recommendations`);
+      } else {
+        throw new Error("Unexpected response format");
+      }
+    } catch (error: any) {
+      console.error("❌ Failed to fetch recommendations:", error);
+      setError(error.message || "Failed to load recommendations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchRecommendations();
+}, [riasecCode, hasGeneratedRecommendations]);
+
+  // Fetch recommendations - ONLY ONCE
   useEffect(() => {
-    if (!riasecCode) return;
+    if (!riasecCode || hasGeneratedRecommendations) return;
 
     const fetchRecommendations = async () => {
       setLoading(true);
@@ -104,6 +166,7 @@ export default function ResultPage() {
         // Handle the response
         if (data.recommendations && Array.isArray(data.recommendations)) {
           setRecommendations(data.recommendations);
+          setHasGeneratedRecommendations(true);
           console.log(`✅ Loaded ${data.recommendations.length} recommendations`);
         } else if (data.error) {
           throw new Error(data.error);
@@ -121,7 +184,7 @@ export default function ResultPage() {
     };
 
     fetchRecommendations();
-  }, [riasecCode]);
+  }, [riasecCode, hasGeneratedRecommendations]);
 
   const handleSeeResults = () => {
     setShowResults(true);

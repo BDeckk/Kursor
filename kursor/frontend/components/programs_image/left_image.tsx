@@ -1,38 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+"use client";
 
-export async function GET(request: NextRequest) {
-  console.log("🎨 Image generation API hit!");
+import React from "react";
 
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get("query");
-
-  if (!query) {
-    return NextResponse.json({ error: "Missing query" }, { status: 400 });
-  }
-
-  try {
-    console.log("🔍 Finding image for:", query);
-
-    // Get the appropriate image URL based on program title
-    const imageUrl = getImageUrlForProgram(query);
-
-    console.log("✅ Image URL selected:", imageUrl);
-    return NextResponse.json({ photoUrl: imageUrl });
-
-  } catch (error) {
-    console.error("❌ Error:", error);
-    
-    // Fallback to default career image
-    return NextResponse.json({
-      photoUrl: "/career-images/programs-career.svg"
-    });
-  }
+interface ProgramImageProps {
+  title: string;
+  className?: string;
+  size?: number; // optional, pixel size for width/height (default 320)
 }
 
-function getImageUrlForProgram(title: string): string {
-  // Extract key words for visual elements - map to image URLs
-  const words = title.toLowerCase();
-  
+/** Helper: determine image path from program title */
+function getImageForProgram(title: string): string {
+  const words = (title || "").toLowerCase();
+
   if (words.includes("computer") || words.includes("software") || words.includes("it")) {
     return "/career-images/programs-computer.svg";
   } else if (words.includes("business") || words.includes("management")) {
@@ -54,7 +33,29 @@ function getImageUrlForProgram(title: string): string {
   } else if (words.includes("accounting") || words.includes("finance")) {
     return "/career-images/programs-accountant.svg";
   }
-  
-  // Default: university/education
+
   return "/career-images/programs-career.svg";
+}
+
+export default function ProgramImage({ title, className = "", size = 320 }: ProgramImageProps) {
+  const imageUrl = getImageForProgram(title);
+
+  const px = `${size + 200}px`;
+  const py = `${size + 150}px`
+    
+  return (
+    <div className={`relative ${className}`}>
+      <div className="relative z-10 flex items-center justify-center py-12">
+        <img
+          src={imageUrl}
+          alt={title}   
+          style={{ width: px, height: px }}
+          className="object-contain"
+          onError={(e) => {
+            e.currentTarget.src = "/career-images/programs-career.svg";
+          }}
+        />
+      </div>
+    </div>
+  );
 }
