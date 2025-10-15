@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import LoginModal from "../components/login/login";
 import SignupModal from "../components/signup/page";
 
 export default function HomePage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setIsVisible(true), 100);
+  }, []);
 
   const handleGetStarted = () => {
     setShowSignupModal(true);
@@ -19,7 +24,11 @@ export default function HomePage() {
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Navbar */}
-      <header className="flex justify-between items-center h-20 pl-10 pr-20 fixed top-6 left-0 w-full z-50 bg-transparent">
+      <header 
+        className={`flex justify-between items-center h-20 pl-10 pr-20 fixed top-6 left-0 w-full z-50 bg-transparent transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
+        }`}
+      >
         {/* Logo (not affected by blend mode) */}
         <div className="flex items-center">
           <img
@@ -50,7 +59,12 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="relative flex flex-1 items-center overflow-hidden pt-15">
           {/* Text + overlap */}
-          <div className="pl-40 max-w-4xl relative z-20">
+          <div 
+            className={`pl-40 max-w-4xl relative z-20 transition-all duration-700 ease-out ${
+              isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-12"
+            }`}
+            style={{ transitionDelay: "200ms" }}
+          >
             <h1 className="text-[55px] font-bold font-outfit leading-snug mb-2 text-gray-900">
               The right school for <br /> 
               the perfect program <br />
@@ -78,7 +92,12 @@ export default function HomePage() {
           </div>
 
           {/* Right Illustration */}
-          <div className="absolute right-0 z-10 pr-23">
+          <div 
+            className={`absolute right-0 z-10 pr-23 transition-all duration-700 ease-out ${
+              isVisible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-12"
+            }`}
+            style={{ transitionDelay: "400ms" }}
+          >
             <img
               src="/career.svg"
               alt="Hero illustration"
@@ -87,7 +106,12 @@ export default function HomePage() {
           </div>
 
           {/* Background Rectangle */}
-          <div className="absolute w-[1021.04px] h-[1210.81px] left-[970px] top-[-350px] z-0 bg-[#FFDE59] rotate-[-20deg]"></div>
+          <div 
+            className={`absolute w-[1021.04px] h-[1210.81px] left-[970px] top-[-350px] z-0 bg-[#FFDE59] rotate-[-20deg] transition-all duration-1000 ease-out ${
+              isVisible ? "opacity-100 scale-100" : "opacity-0 scale-75"
+            }`}
+            style={{ transitionDelay: "300ms" }}
+          ></div>
         </main>
 
 

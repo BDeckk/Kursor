@@ -10,11 +10,11 @@ type RIASEC = "R" | "I" | "A" | "S" | "E" | "C";
 export default function AssessmentPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
+  const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
 
-  //Resets assessment result
+  //Resets assessment result and triggers animation
   useEffect(() => {
-
     setCurrentQuestion(0);
     setAnswers({});
     
@@ -23,6 +23,8 @@ export default function AssessmentPage() {
     localStorage.removeItem("recommendations");
     localStorage.removeItem("hasGeneratedRecommendations");
 
+    // Trigger animation after component mounts
+    setTimeout(() => setIsVisible(true), 100);
   }, []);
 
   const handleAnswer = (questionId: number, value: number) => {
@@ -74,7 +76,11 @@ export default function AssessmentPage() {
       
       <div className="flex flex-col items-center justify-center px-6 pb-12 pt-30">
         {/* Assessment Title */}
-        <div className="text-center mb-8 w-full max-w-4xl">
+        <div 
+          className={`text-center mb-8 w-full max-w-4xl transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
+          }`}
+        >
           <h1 className="text-5xl font-bold text-black mb-6">
             ASSESSMENT <span style={{ color: '#FFDE59' }}>TEST</span>
           </h1>
@@ -94,17 +100,23 @@ export default function AssessmentPage() {
 
         {/* Question Card */}
         <div
-          className="w-full mx-auto rounded-3xl p-3 shadow-lg"
-          style={{ backgroundColor: "#FFDE59", width: "800px" }} // Outermost (bright yellow)
+          className={`w-full mx-auto rounded-3xl p-3 shadow-lg transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+          style={{ 
+            backgroundColor: "#FFDE59", 
+            width: "800px",
+            transitionDelay: "200ms"
+          }}
         >
           <div
             className="rounded-2xl pt-10 pb-6 px-10 flex flex-col"
-            style={{ backgroundColor: "#FDEDAA" }} // Middle layer (soft yellow)
+            style={{ backgroundColor: "#FDEDAA" }}
           >
             {/* Inner Lightest Yellow wraps ONLY Q + Circles */}
             <div
               className="rounded-4xl px-5 pt-5 pb-10 mb-6 mx-auto"
-              style={{ backgroundColor: "#FFFDEC", width: "700px"}} // Innermost (cream)
+              style={{ backgroundColor: "#FFFDEC", width: "700px"}}
             >
               {/* Question */}
               <p className="text-3xl font-medium font-fredoka text-black mb-6 text-center leading-relaxed">
@@ -162,7 +174,12 @@ export default function AssessmentPage() {
         </div>
 
         {/* Question Counter */}
-        <div className="mt-8 text-gray-600 text-lg font-medium">
+        <div 
+          className={`mt-8 text-gray-600 text-lg font-medium transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+          style={{ transitionDelay: "400ms" }}
+        >
           Question {currentQuestion + 1} of {questions.length}
         </div>
       </div>
