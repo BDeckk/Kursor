@@ -39,6 +39,12 @@ export default function AssessmentPage() {
     }
   };
 
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+    }
+  };
+
   const handleSubmit = () => {
     const scores: Record<RIASEC, number> = {
       R: 0,
@@ -157,8 +163,18 @@ export default function AssessmentPage() {
               </div>
             </div>
 
-            {/* Next Button stays outside the cream box */}
-            <div className="flex justify-end">
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <button
+                onClick={handlePrevious}
+                disabled={currentQuestion === 0}
+                className="bg-[#FFFDEC] text-black font-medium font-fredoka text-lg px-10 py-2 rounded-full 
+                            transition-all duration-300 ease-in-out 
+                            disabled:opacity-50 disabled:cursor-not-allowed shadow-md 
+                            hover:scale-105"
+              >
+                Previous
+              </button>
               <button
                 onClick={handleNext}
                 disabled={!answers[currentQ.id]}

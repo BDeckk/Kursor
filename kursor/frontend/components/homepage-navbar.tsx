@@ -89,18 +89,18 @@ export default function Navbar() {
   };
 
   return (
-    <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
+    <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[3%] pl-[3%]">
       {/* Logo */}
       <div className="flex items-center ">
         <img
           src="/Kursor.png"
           alt="Kursor logo"
-          className="h-70 w-auto pt-1"
+          className="h-12 w-auto"
         />
       </div>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-4 pt-5">
+      <div className="flex items-center gap-4 pt-1">
         {/* Home Button */}
         <button
           onClick={handleHomeClick}
