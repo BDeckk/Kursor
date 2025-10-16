@@ -34,7 +34,7 @@ export default function HomePage() {
           <img
             src="/Kursor.png"
             alt="Kursor logo"
-            className="h-70 pl-10 w-auto pt-1"
+            className="h-15 pl-10 w-auto pt-1"
           />
         </div>
 
