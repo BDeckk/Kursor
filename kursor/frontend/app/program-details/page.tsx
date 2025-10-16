@@ -103,6 +103,7 @@ export default function ProgramDetailsPage() {
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
         }`}
       >
+        
       {/* Back Button */}
       <div className="fixed top-24 left-3 z-1">
         <button

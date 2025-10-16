@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Upload } from "lucide-react";
+import { useState, useEffect } from "react";
 import { UserAuth } from "@/Context/AuthContext";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/supabaseClient";
 
 export default function KursorProfileForm() {
   const { session, insertUser, isUserExist } = UserAuth();
@@ -14,8 +12,6 @@ export default function KursorProfileForm() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -23,8 +19,8 @@ export default function KursorProfileForm() {
     birthdate: "",
     gender: "",
     address: "",
+    strand: "",
     age: "",
-    profile_photo_url: "",
   });
 
   useEffect(() => {
@@ -45,63 +41,6 @@ export default function KursorProfileForm() {
     setError("");
   };
 
-  const handlePhotoClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Please upload an image file.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image size should be less than 5MB.");
-      return;
-    }
-
-    setUploading(true);
-    setError("");
-
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `profile-photos/${fileName}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from("profiles")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from("profiles")
-        .getPublicUrl(filePath);
-
-      console.log("Upload successful! Public URL:", urlData.publicUrl);
-      
-      setPhotoUrl(urlData.publicUrl);
-      setFormData({
-        ...formData,
-        profile_photo_url: urlData.publicUrl,
-      });
-      setSuccess("Photo uploaded successfully!");
-      
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err) {
-      console.error("Error uploading photo:", err);
-      setError("Failed to upload photo. Please try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (!user) {
       setError("No authenticated user found.");
@@ -114,8 +53,7 @@ export default function KursorProfileForm() {
       return;
     }
 
-    if (!formData.full_name || !formData.email || !formData.birthdate || !formData.gender || !formData.address || !formData.age) {
-      console.log(formData);
+    if (!formData.full_name || !formData.email || !formData.birthdate || !formData.gender || !formData.address || !formData.age || !formData.strand) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -133,11 +71,10 @@ export default function KursorProfileForm() {
       location: formData.address,
       gender: formData.gender,
       age: formData.age,
+      strand: formData.strand,
       birthdate: formData.birthdate,
-      profile_image_url: formData.profile_photo_url || null,
+      profile_image_url: null, // always null now
     };
-
-    console.log("User data being sent:", userData);
 
     try {
       const result = await insertUser(userData);
@@ -151,12 +88,10 @@ export default function KursorProfileForm() {
           birthdate: "",
           gender: "",
           address: "",
+          strand: "",
           age: "",
-          profile_photo_url: "",
         });
-        setPhotoUrl(null);
- 
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
         setError("Error creating profile. Please try again.");
       }
@@ -167,22 +102,18 @@ export default function KursorProfileForm() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex ">
       {/* Left Side - Image (45% width) */}
       <div className="w-[55%] flex flex-col">
-        {/* Logo in top left */}
         <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
-          {/* Logo */}
-          <div className="flex items-center ">
+          <div className="flex items-center">
             <img
               src="/Kursor.png"
               alt="Kursor logo"
-              className="h-70 w-auto pt-1"
+              className="h-12 w-auto"
             />
           </div>
         </header>
-        
-        {/* Left Image */}
         <div className="flex-1 flex items-center">
           <img 
             src="/registration-career.png" 
@@ -194,45 +125,7 @@ export default function KursorProfileForm() {
 
       {/* Right Side - Form (55% width) */}
       <div className="w-[45%] flex items-center justify-center">
-        <div className="w-[600px] max-w-[600px]">
-          {/* Profile Photo Upload */}
-          <div className="flex justify-center mt-25 mb-8">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onClick={handlePhotoClick}
-              disabled={uploading}
-              className="w-40 h-40 rounded-full border-4 border-yellow-400 bg-white hover:bg-gray-50 transition-colors flex items-center justify-center group overflow-hidden relative"
-            >
-              {photoUrl ? (
-                <img
-                  src={photoUrl}
-                  alt="Profile preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    console.error("Image failed to load:", photoUrl);
-                    setError("Failed to load profile image. Please try again.");
-                    setPhotoUrl(null);
-                  }}
-                  onLoad={() => console.log("Image loaded successfully:", photoUrl)}
-                />
-              ) : (
-                <Upload className={`w-10 h-10 text-gray-400 group-hover:text-gray-600 ${uploading ? 'animate-pulse' : ''}`} />
-              )}
-              {uploading && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-            </button>
-          </div>
-
+        <div className="w-[600px] max-w-[600px] pt-30">
           {/* Form Fields */}
           <div className="space-y-5">
             {/* Full Name */}
@@ -302,18 +195,34 @@ export default function KursorProfileForm() {
                 value={formData.gender}
                 onChange={handleChange}
                 className="w-full px-6 py-3 pr-10 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer appearance-none"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 1.4rem center',
-                  backgroundSize: '20px'
-                }}
               >
                 <option value="">Select gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
                 <option value="prefer-not-to-say">Prefer not to say</option>
+              </select>
+            </div>
+
+            {/* Strand */}
+            <div className="relative pb-4">
+              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
+                Strand *
+              </label>
+              <select
+                name="strand"
+                value={formData.strand}
+                onChange={handleChange}
+                className="w-full px-6 py-3 pr-10 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer appearance-none"
+              >
+                <option value="">Select strand</option>
+                <option value="TVL">TVL</option>
+                <option value="STEM">STEM</option>
+                <option value="ABM">ABM</option>
+                <option value="HUMS">HUMS</option>
+                <option value="GAS">GAS</option>
+                <option value="ICT">ICT</option>
+                <option value="GA">GA</option>
               </select>
             </div>
 
@@ -339,7 +248,7 @@ export default function KursorProfileForm() {
                 disabled={uploading}
                 className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-bold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-base"
               >
-                {uploading ? "Uploading..." : "Submit"}
+                Submit
               </button>
             </div>
 
