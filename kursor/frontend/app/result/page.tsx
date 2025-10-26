@@ -166,27 +166,27 @@ export default function ResultPage() {
       <div className=" mx-auto pl-[17%] pr-[17%] pt-[9%]">
 
         {/* User Profile */}
-        <div className="bg-[#F5D555] to-yellow-400 p-7 rounded-3xl">
+        <div className="bg-[#F5D555] to-yellow-400 p-7 rounded-3xl w-[950px] justify-center">
           <div className="bg-[#FFDE59] rounded-3xl p-8 pt-10 pb-15 border-4 border-white relative overflow-visible">
             <div className="flex items-center justify-between">
               <div className="flex-1 max-w-xl">
-                <h1 className="text-5xl font-bold text-gray-900 pl-8 mb-4">
+                <h1 className="text-5xl font-bold font-outfit text-gray-900 pl-8 mb-6">
                   { profileData?.full_name }
                 </h1>
-                <p className="text-xl text-gray-800 leading-relaxed mb-6 pl-10 pr-15 pt-3 mb-10">
+                <p className="text-xl text-gray-800 font-fredoka leading-relaxed mb-6 pl-10 pr-5 pt-3 mb-10">
                   Nice job on accomplishing the assessment test! Now check your possible career/degree path based on the result of the test.
                 </p>
                 <button 
                   onClick={handleSeeResults}
-                  className="bg-yellow-200 hover:bg-yellow-100 text-gray-900 font-bold py-4 px-8 ml-15 rounded-full text-2xl transition-all shadow-lg hover:shadow-xl"
+                  className="bg-yellow-200 hover:bg-yellow-100 text-gray-900 font-fredoka font-medium py-4 px-8 ml-10 w-[280px] rounded-full text-2xl transition-all shadow-lg hover:shadow-xl"
                 >
                   See Results →
                 </button>
               </div>
               
-              <div className="relative">
+              <div className="relative pr-5">
                 {/* Large Profile Picture */}
-                <div className="w-80 h-80 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden flex items-center justify-center">
+                <div className="w-85 h-85 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden flex items-center justify-center">
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                   ) : profileData?.profile_image_url ? (
