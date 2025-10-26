@@ -7,6 +7,7 @@ import { supabase } from "@/supabaseClient";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ProgramImage from "@/components/programs_image/left_image";
 import MainImage from "@/components/programs_image/main_image";
+import { useNearbySchools } from "@/hooks/userNearbySchools";
 
 interface Program {
   id?: string;
@@ -16,19 +17,12 @@ interface Program {
   description?: string;
 }
 
-const schoolList = [
-  { rank: 1, schoolname: "Cebu Insitute of Technology - University", image: "/temporary-school-logo/CIT.png"},
-  { rank: 2, schoolname: "University of San Carlos", image: "/temporary-school-logo/USC.png"},
-  { rank: 3, schoolname: "Cebu Normal University", image: "/temporary-school-logo/USC.png"},
-  { rank: 4, schoolname: "Southwestern University PHINMA", image: "/temporary-school-logo/USC.png"},
-  { rank: 5, schoolname: "Cebu Institute of Medicine", image: "/temporary-school-logo/USC.png"},
-];
-
 export default function ProgramDetailsPage() {
   const [program, setProgram] = useState<Program | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const { nearbySchools, loading, error: locationError } = useNearbySchools();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -219,7 +213,15 @@ export default function ProgramDetailsPage() {
             Top Performing <span className="text-white">Universities in this Field</span>
           </h2>
         </div>
-        <NearbySchoolCarousel school_card={schoolList} />
+        {loading ? (
+            <div className="text-center text-gray-800 font-fredoka">Finding nearby schools...</div>
+          ) : locationError ? (
+            <div className="text-center text-red-600 font-fredoka">{locationError}</div>
+          ) : nearbySchools.length > 0 ? (
+            <NearbySchoolCarousel school_card={nearbySchools} />
+          ) : (
+            <div className="text-center text-gray-800 font-fredoka">No nearby schools found.</div>
+          )}
       </div>
     </div>
   );
