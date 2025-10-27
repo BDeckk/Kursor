@@ -1,4 +1,4 @@
-"use client"; 
+"use client";
 
 import Navbar from "@/components/homepage-navbar";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
@@ -21,16 +21,24 @@ export default function SchoolPage() {
       {/* Universities Near Your Location */}
       <div className="max-w-7xl mx-auto py-12 px-6 pt-[7%]">
         <h2 className="text-3xl font-bold text-gray-800 mb-8">
-          Universities and Schools <span className="text-yellow-400">Near Your Location</span>
+          Universities and Schools{" "}
+          <span className="text-yellow-400">Near Your Location</span>
         </h2>
+
         {loading ? (
-          <div className="text-center text-gray-800 font-fredoka">Finding nearby schools...</div>
+          <div className="text-center text-gray-800 font-fredoka">
+            Finding nearby schools...
+          </div>
         ) : locationError ? (
-          <div className="text-center text-red-600 font-fredoka">{locationError}</div>
+          <div className="text-center text-red-600 font-fredoka">
+            {locationError}
+          </div>
         ) : nearbySchools.length > 0 ? (
           <NearbySchoolCarousel school_card={nearbySchools} />
         ) : (
-          <div className="text-center text-gray-800 font-fredoka">No nearby schools found.</div>
+          <div className="text-center text-gray-800 font-fredoka">
+            No nearby schools found.
+          </div>
         )}
       </div>
 
@@ -45,14 +53,21 @@ export default function SchoolPage() {
           <h2 className="text-3xl font-bold text-gray-800 mb-8">
             Top Performing <span className="text-white">Universities</span>
           </h2>
+
           {loading ? (
-            <div className="text-center text-gray-800 font-fredoka">Finding nearby schools...</div>
+            <div className="text-center text-gray-800 font-fredoka">
+              Finding nearby schools...
+            </div>
           ) : locationError ? (
-            <div className="text-center text-red-600 font-fredoka">{locationError}</div>
+            <div className="text-center text-red-600 font-fredoka">
+              {locationError}
+            </div>
           ) : nearbySchools.length > 0 ? (
             <NearbySchoolCarousel school_card={nearbySchools} />
           ) : (
-            <div className="text-center text-gray-800 font-fredoka">No nearby schools found.</div>
+            <div className="text-center text-gray-800 font-fredoka">
+              No nearby schools found.
+            </div>
           )}
         </div>
       </div>
@@ -60,16 +75,24 @@ export default function SchoolPage() {
       {/* Recommended Universities */}
       <div className="max-w-7xl mx-auto py-12 px-6">
         <h2 className="text-3xl font-bold text-gray-800 mb-8">
-          Recommended Universities Based on <span className="text-yellow-400">Your Assessment</span>
+          Recommended Universities Based on{" "}
+          <span className="text-yellow-400">Your Assessment</span>
         </h2>
+
         {loading ? (
-          <div className="text-center text-gray-800 font-fredoka">Finding nearby schools...</div>
+          <div className="text-center text-gray-800 font-fredoka">
+            Finding nearby schools...
+          </div>
         ) : locationError ? (
-          <div className="text-center text-red-600 font-fredoka">{locationError}</div>
+          <div className="text-center text-red-600 font-fredoka">
+            {locationError}
+          </div>
         ) : nearbySchools.length > 0 ? (
           <NearbySchoolCarousel school_card={nearbySchools} />
         ) : (
-          <div className="text-center text-gray-800 font-fredoka">No nearby schools found.</div>
+          <div className="text-center text-gray-800 font-fredoka">
+            No nearby schools found.
+          </div>
         )}
       </div>
     </div>

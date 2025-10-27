@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "@/supabaseClient"
 
 interface NearbySchool {
+  id: number | string
   rank: number
   schoolname: string
   image: string
@@ -19,7 +20,6 @@ export function useNearbySchools() {
     const fetchNearbySchools = async () => {
       setLoading(true)
       try {
-        // ✅ 1. Get logged-in user
         const { data: userData, error: userError } = await supabase.auth.getUser()
         if (userError || !userData?.user) {
           setError("User not logged in")
@@ -28,7 +28,6 @@ export function useNearbySchools() {
 
         const userId = userData.user.id
 
-        // ✅ 2. Get user's saved coordinates
         const { data: profile, error: profileError } = await supabase
           .from("users")
           .select("latitude, longitude")
@@ -42,19 +41,20 @@ export function useNearbySchools() {
 
         const { latitude, longitude } = profile
 
-        // ✅ 3. Call your nearby schools API
         const res = await fetch(`/api/nearby-school?lat=${latitude}&lng=${longitude}`)
         const data = await res.json()
 
         if (Array.isArray(data)) {
-          const formatted = data.map((school: any, index: number) => ({
+          const formatted: NearbySchool[] = data.map((school: any, index: number) => ({
+            id: school.id ?? index, // <-- Ensure `id` exists
             rank: index + 1,
             schoolname: school.name,
             image: "/temporary-school-logo/default-school.png",
             distance: school.distance_km?.toFixed(2),
-          }))
-          setNearbySchools(formatted)
-        } else {
+          }));
+          setNearbySchools(formatted);
+        }
+        else {
           setError("No nearby schools found.")
         }
       } catch (err) {
