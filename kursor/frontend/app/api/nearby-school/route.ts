@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     console.log("📍 Calling get_nearby_schools with:", lat, lng);
 
-    // ✅ Ensure parameter names match your SQL function exactly
+    //  Ensures parameter names match your SQL function exactly
     const { data, error } = await supabase.rpc("get_nearby_schools", {
       user_lat: lat,
       user_lng: lng,
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    console.log("✅ Supabase RPC returned:", data);
+    console.log("Supabase RPC returned:", data);
 
     // Return the result
     return NextResponse.json(data || []);

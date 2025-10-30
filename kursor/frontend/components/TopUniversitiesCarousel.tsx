@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Star, Heart } from "lucide-react";
+import { Heart, Star, Award, MapPin } from "lucide-react";
 import { supabase } from "@/supabaseClient";
 import {
   Carousel,
@@ -15,43 +15,40 @@ import {
 const SUPABASE_STORAGE_URL =
   "https://fiujlzfouidrxbechcxa.supabase.co/storage/v1/object/public";
 
+// Simplified image resolver
 function resolveImageUrl(imagePath?: string | null) {
   if (!imagePath) return null;
   const trimmed = String(imagePath).trim();
   if (!trimmed) return null;
 
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed.replace("/temporary-school-logo/", "/school_logos/");
-  }
-  if (trimmed.includes("/storage/v1/object/public/")) {
-    return `${trimmed}`.replace("/temporary-school-logo/", "/school_logos/");
-  }
+  // Keep logic to handle full URLs vs. path segments
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes("/storage/v1/object/public/")) return trimmed;
+
   const segments = trimmed.split("/").filter(Boolean);
-  if (segments[0] === "school_logos") {
-    const rest = segments.slice(1).map(s => encodeURIComponent(s)).join("/");
-    return `${SUPABASE_STORAGE_URL}/school_logos/${rest}`;
-  }
   const encoded = segments.map(s => encodeURIComponent(s)).join("/");
   return `${SUPABASE_STORAGE_URL}/school_logos/${encoded}`;
 }
 
-export function NearbySchoolCarousel({
-  school_card,
+export function TopUniversitiesCarousel({
+  universities,
   userId,
 }: {
-  school_card: {
+  universities: {
     id: number | string;
     rank: number;
     schoolname: string;
     image?: string | null;
+    country?: string | null;
+    reason?: string | null;
   }[];
   userId: string;
 }) {
   const router = useRouter();
   const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
-  const [likedSchools, setLikedSchools] = React.useState<Record<string, boolean>>({});
+  const [likedUnis, setLikedUnis] = React.useState<Record<string, boolean>>({});
 
-  // Fetch liked schools for the current user
+  // --- Data Fetching and Liking Logic (Kept as is) ---
   React.useEffect(() => {
     if (!userId) return;
 
@@ -73,57 +70,40 @@ export function NearbySchoolCarousel({
         },
         {}
       );
-      setLikedSchools(likedMap);
+      setLikedUnis(likedMap);
     };
 
     fetchLikes();
   }, [userId]);
 
-  // Like/unlike handler
   const toggleLike = async (schoolId: string | number) => {
     if (!userId) {
-      alert("Please log in to like a school.");
+      alert("Please log in to like a university.");
       return;
     }
 
-    if (!schoolId) {
-      console.error("Missing school ID when toggling like");
-      return;
-    }
+    const isLiked = likedUnis[String(schoolId)];
+    setLikedUnis(prev => ({ ...prev, [schoolId]: !isLiked }));
 
-    // Determine if schoolId is numeric or UUID
-    const isUuid = typeof schoolId === "string" && schoolId.includes("-");
-    const idValue = isUuid ? schoolId : Number(schoolId);
-
-    if (!idValue || (typeof idValue === "number" && isNaN(idValue))) {
-      console.error("Invalid schoolId:", schoolId);
-      return;
-    }
-
-    const isLiked = likedSchools[String(schoolId)];
-    setLikedSchools(prev => ({ ...prev, [schoolId]: !isLiked }));
+    const idValue = typeof schoolId === "string" && schoolId.includes("-") ? schoolId : Number(schoolId);
 
     if (isLiked) {
-      // Unlike
       const { error } = await supabase
         .from("school_likes")
         .delete()
         .eq("user_id", userId)
         .eq("school_id", idValue);
-
       if (error) {
         console.error("Failed to unlike:", error.message);
-        setLikedSchools(prev => ({ ...prev, [schoolId]: true })); // revert on failure
+        setLikedUnis(prev => ({ ...prev, [schoolId]: true }));
       }
     } else {
-      // Like
       const { error } = await supabase
         .from("school_likes")
         .insert([{ user_id: userId, school_id: idValue }]);
-
       if (error) {
         console.error("Failed to like:", error.message);
-        setLikedSchools(prev => ({ ...prev, [schoolId]: false })); // revert on failure
+        setLikedUnis(prev => ({ ...prev, [schoolId]: false }));
       }
     }
   };
@@ -132,14 +112,16 @@ export function NearbySchoolCarousel({
     router.push(`/school-details/${id}`);
   };
 
+  // --- Simplified UI Rendering ---
+
   return (
     <Carousel className="w-full relative overflow-visible">
-      <CarouselContent className="gap-2 px-12">
-        {school_card.map((school, index) => {
-          const imageUrl = resolveImageUrl(school.image);
-          const idKey = String(school.id);
+      <CarouselContent className="gap-4 px-12">
+        {universities.map((uni, index) => {
+          const imageUrl = resolveImageUrl(uni.image);
+          const idKey = String(uni.id);
           const isFailed = !!failedImages[idKey];
-          const isLiked = likedSchools[idKey];
+          const isLiked = likedUnis[idKey];
 
           return (
             <CarouselItem
@@ -147,13 +129,15 @@ export function NearbySchoolCarousel({
               className="basis-auto min-w-[230px] max-w-[230px]"
             >
               <div
-                onClick={() => handleCardClick(school.id)}
-                className="cursor-pointer bg-white rounded-3xl py-6 px-4 shadow-lg flex flex-col items-center text-center h-full relative hover:shadow-xl transition-shadow"
+                onClick={() => handleCardClick(uni.id)}
+                className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col items-center text-center h-full relative hover:shadow-xl transition-shadow"
               >
+                
+                {/* Like Button */}
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    toggleLike(school.id);
+                    toggleLike(uni.id);
                   }}
                   className={`absolute top-4 right-4 transition-colors ${
                     isLiked ? "text-red-500" : "text-gray-400 hover:text-red-500"
@@ -165,23 +149,22 @@ export function NearbySchoolCarousel({
                     }`}
                   />
                 </button>
+                
+                {/* Rank Badge */}
+                <div className="absolute top-4 left-4 flex items-center gap-1 text-sm font-semibold text-gray-700">
+                    <Award className="w-4 h-4 text-gray-500" />
+                    <span>#{uni.rank}</span>
+                </div>
 
-                <div className="w-32 h-32 flex items-center justify-center mb-4">
+                {/* Image Section */}
+                <div className="w-32 h-32 flex items-center justify-center mb-4 mt-6">
                   {imageUrl && !isFailed ? (
                     <img
                       src={imageUrl}
-                      alt={school.schoolname}
+                      alt={uni.schoolname}
                       className="w-full h-full object-contain rounded-md"
                       onError={() => {
                         setFailedImages(prev => ({ ...prev, [idKey]: true }));
-                      }}
-                      onLoad={() => {
-                        setFailedImages(prev => {
-                          if (!prev[idKey]) return prev;
-                          const copy = { ...prev };
-                          delete copy[idKey];
-                          return copy;
-                        });
                       }}
                     />
                   ) : (
@@ -191,23 +174,37 @@ export function NearbySchoolCarousel({
                   )}
                 </div>
 
-                <h3 className="text-base font-bold font-outfit text-black mb-4 min-h-[3rem] flex items-center">
-                  {school.schoolname}
+                {/* Content Section */}
+                <h3 className="text-base font-bold text-black mb-2 min-h-[3rem] flex items-center justify-center">
+                  {uni.schoolname}
                 </h3>
 
                 <div className="w-full space-y-1">
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">
-                      4.79 critique review
-                    </span>
+                  {uni.reason && (
+                    // Reason: Simple text, using a smaller font
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
+                      {uni.reason}
+                    </p>
+                  )}
+
+                  {/* Simplified Rating Section */}
+                  <div className="flex items-center justify-center pt-3 border-t border-gray-100 mt-4">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${
+                            star <= 4
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">
-                      4.38 student review
-                    </span>
-                  </div>
+                  <span className="text-xs font-semibold text-blue-600 block mt-1">
+                      View Details →
+                  </span>
                 </div>
               </div>
             </CarouselItem>
@@ -215,8 +212,9 @@ export function NearbySchoolCarousel({
         })}
       </CarouselContent>
 
-      <CarouselPrevious className="text-gray-800 hover:text-yellow-500 -left-6" />
-      <CarouselNext className="text-gray-800 hover:text-yellow-500 -right-6" />
+      {/* Simplified Carousel Navigation Buttons */}
+      <CarouselPrevious className="text-gray-800 hover:text-blue-500 -left-6" />
+      <CarouselNext className="text-gray-800 hover:text-blue-500 -right-6" />
     </Carousel>
   );
 }
