@@ -41,6 +41,7 @@ export default function RootLayout({
     <html lang="en" className={`${fredoka.variable} ${outfit.variable}`} >
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           {children}

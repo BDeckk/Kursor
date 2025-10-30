@@ -1,12 +1,18 @@
 "use client";
 
 import Navbar from "@/components/homepage-navbar";
+import { TopUniversitiesCarousel } from "@/components/TopUniversitiesCarousel";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
+import { UserAuth } from "@/Context/AuthContext";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
+import { useTopUniversitiesGemini } from "@/hooks/useTopUniversitiesGemini"; 
 import { useState, useEffect } from "react";
 
 export default function SchoolPage() {
   const { nearbySchools, loading, error: locationError } = useNearbySchools();
+  const { universities, loading: topLoading, error: topError } = useTopUniversitiesGemini(); 
+  const { session } = UserAuth();
+  const user = session?.user;
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -27,14 +33,17 @@ export default function SchoolPage() {
 
         {loading ? (
           <div className="text-center text-gray-800 font-fredoka">
-            Finding nearby schools...
+            Finding nearby schools…
           </div>
         ) : locationError ? (
           <div className="text-center text-red-600 font-fredoka">
             {locationError}
           </div>
         ) : nearbySchools.length > 0 ? (
-          <NearbySchoolCarousel school_card={nearbySchools} />
+          <NearbySchoolCarousel
+            school_card={nearbySchools}
+            userId={user?.id ?? ""}
+          />
         ) : (
           <div className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
@@ -54,19 +63,22 @@ export default function SchoolPage() {
             Top Performing <span className="text-white">Universities</span>
           </h2>
 
-          {loading ? (
+          {topLoading ? (
             <div className="text-center text-gray-800 font-fredoka">
-              Finding nearby schools...
+              Ranking universities via Gemini…
             </div>
-          ) : locationError ? (
+          ) : topError ? (
             <div className="text-center text-red-600 font-fredoka">
-              {locationError}
+              {topError}
             </div>
-          ) : nearbySchools.length > 0 ? (
-            <NearbySchoolCarousel school_card={nearbySchools} />
+          ) : universities.length > 0 ? (
+            <TopUniversitiesCarousel
+              universities={universities}
+              userId={user?.id ?? ""}
+            />
           ) : (
             <div className="text-center text-gray-800 font-fredoka">
-              No nearby schools found.
+              No top universities found.
             </div>
           )}
         </div>
@@ -81,14 +93,17 @@ export default function SchoolPage() {
 
         {loading ? (
           <div className="text-center text-gray-800 font-fredoka">
-            Finding nearby schools...
+            Finding nearby schools…
           </div>
         ) : locationError ? (
           <div className="text-center text-red-600 font-fredoka">
             {locationError}
           </div>
         ) : nearbySchools.length > 0 ? (
-          <NearbySchoolCarousel school_card={nearbySchools} />
+          <NearbySchoolCarousel
+            school_card={nearbySchools}
+            userId={user?.id ?? ""}
+          />
         ) : (
           <div className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
