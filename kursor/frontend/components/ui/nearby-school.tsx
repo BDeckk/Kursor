@@ -45,7 +45,7 @@ export function NearbySchoolCarousel({
     schoolname: string;
     image?: string | null;
   }[];
-  userId: string;
+  userId?: string;
 }) {
   const router = useRouter();
   const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
@@ -148,8 +148,10 @@ export function NearbySchoolCarousel({
             >
               <div
                 onClick={() => handleCardClick(school.id)}
-                className="cursor-pointer bg-white rounded-3xl py-6 px-4 shadow-lg flex flex-col items-center text-center h-full relative hover:shadow-xl transition-shadow"
+                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl transition-shadow
+                          px-3 py-6 h-[320px]" // <- fixed height
               >
+                {/* like button (absolute) */}
                 <button
                   onClick={e => {
                     e.stopPropagation();
@@ -159,54 +161,51 @@ export function NearbySchoolCarousel({
                     isLiked ? "text-red-500" : "text-gray-400 hover:text-red-500"
                   }`}
                 >
-                  <Heart
-                    className={`w-6 h-6 ${
-                      isLiked ? "fill-red-500 text-red-500" : ""
-                    }`}
-                  />
+                  <Heart className={`w-6 h-6 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
                 </button>
 
-                <div className="w-32 h-32 flex items-center justify-center mb-4">
-                  {imageUrl && !isFailed ? (
-                    <img
-                      src={imageUrl}
-                      alt={school.schoolname}
-                      className="w-full h-full object-contain rounded-md"
-                      onError={() => {
-                        setFailedImages(prev => ({ ...prev, [idKey]: true }));
-                      }}
-                      onLoad={() => {
-                        setFailedImages(prev => {
-                          if (!prev[idKey]) return prev;
-                          const copy = { ...prev };
-                          delete copy[idKey];
-                          return copy;
-                        });
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
-                      No image
-                    </div>
-                  )}
+                {/* MAIN CENTER WRAPPER: centers logo + name */}
+                <div className="flex flex-col items-center justify-center flex-1">
+                  <div className="w-32 h-32 flex items-center justify-center mb-4">
+                    {imageUrl && !isFailed ? (
+                      <img
+                        src={imageUrl}
+                        alt={school.schoolname}
+                        className="w-full h-full object-contain rounded-md"
+                        onError={() => setFailedImages(prev => ({ ...prev, [idKey]: true }))}
+                        onLoad={() =>
+                          setFailedImages(prev => {
+                            if (!prev[idKey]) return prev;
+                            const copy = { ...prev };
+                            delete copy[idKey];
+                            return copy;
+                          })
+                        }
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
+                        No image
+                      </div>
+                    )}
+                  </div>
+
+                  <h3
+                    className="text-base font-bold font-outfit text-black mb-0 px-2 text-center"
+                    style={{ lineHeight: 1.15 }}
+                  >
+                    {school.schoolname}
+                  </h3>
                 </div>
 
-                <h3 className="text-base font-bold font-outfit text-black mb-4 min-h-[3rem] flex items-center">
-                  {school.schoolname}
-                </h3>
-
-                <div className="w-full space-y-1">
+                {/* BOTTOM (reviews) — stays docked */}
+                <div className="w-full mt-auto space-y-1 pt-4">
                   <div className="flex items-center justify-center gap-2 text-sm">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">
-                      4.79 critique review
-                    </span>
+                    <span className="text-gray-700 font-fredoka">4.79 critique review</span>
                   </div>
                   <div className="flex items-center justify-center gap-2 text-sm">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">
-                      4.38 student review
-                    </span>
+                    <span className="text-gray-700 font-fredoka">4.38 student review</span>
                   </div>
                 </div>
               </div>
@@ -215,8 +214,8 @@ export function NearbySchoolCarousel({
         })}
       </CarouselContent>
 
-      <CarouselPrevious className="text-gray-800 hover:text-yellow-500 -left-6" />
-      <CarouselNext className="text-gray-800 hover:text-yellow-500 -right-6" />
+      <CarouselPrevious className="text-gray-800 hover:text-yellow-500 -left-20" />
+      <CarouselNext className="text-gray-800 hover:text-yellow-500 -right-20" />
     </Carousel>
   );
 }

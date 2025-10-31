@@ -260,7 +260,7 @@ export default function KursorProfileForm() {
       {/* Left Side (image) */}
       <div className="w-[55%] flex flex-col">
         <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
-          <div className="flex items-center">
+          <div className="flex items-center pl-7">
             <img src="/Kursor.png" alt="Kursor logo" className="h-12 w-auto" />
           </div>
         </header>
@@ -368,7 +368,7 @@ export default function KursorProfileForm() {
               <button
                 onClick={handleSubmit}
                 disabled={uploading || isSubmitting}
-                className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-bold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-base"
+                className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-semibold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-base"
                 aria-label="Submit profile form"
               >
                 {isSubmitting ? "Submitting..." : "Submit"}
