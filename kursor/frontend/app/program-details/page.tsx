@@ -224,5 +224,4 @@ export default function ProgramDetailsPage() {
           )}
       </div>
     </div>
-  );
-}
+)}
