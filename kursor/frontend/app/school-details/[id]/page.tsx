@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/supabaseClient";
+<<<<<<< Updated upstream
 import Navbar from "@/components/homepage-navbar";
+=======
+import { useNearbySchools } from "@/hooks/userNearbySchools";
+import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
+import ReviewSection from "@/components/reviews/SchoolReviews";
+>>>>>>> Stashed changes
 
 interface School {
   id: string;
@@ -18,6 +24,7 @@ interface School {
 }
 
 export default function SchoolDetailsPage() {
+<<<<<<< Updated upstream
   const params = useParams();
   const id = params?.id as string;
   
@@ -25,11 +32,33 @@ export default function SchoolDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+=======
+  const { id } = useParams() as { id: string };
+  const router = useRouter();
+
+  const [school, setSchool] = useState<School | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  const { nearbySchools, loading: nearbyLoading, error: locationError } =
+    useNearbySchools();
+
+  // Entrance animation
+  useEffect(() => {
+    const timeout = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Fetch school data from Supabase
+>>>>>>> Stashed changes
   useEffect(() => {
     if (!id) return;
 
-    async function fetchSchoolDetails() {
+    const fetchSchoolDetails = async () => {
+      setLoading(true);
       try {
+<<<<<<< Updated upstream
         setLoading(true);
         
         // Fetch school data from Supabase
@@ -37,6 +66,12 @@ export default function SchoolDetailsPage() {
           .from('schools')
           .select('*')
           .eq('id', id)
+=======
+        const { data, error } = await supabase
+          .from("schools")
+          .select("*")
+          .eq("id", id)
+>>>>>>> Stashed changes
           .single();
         
         console.log('Fetch result:', { data, fetchError });
@@ -57,6 +92,7 @@ export default function SchoolDetailsPage() {
           return;
         }
 
+<<<<<<< Updated upstream
         // Get public URLs for images from storage
         let logoUrl = '';
         let pictureUrl = '';
@@ -83,14 +119,22 @@ export default function SchoolDetailsPage() {
       } catch (err) {
         console.error('Error fetching school:', err);
         setError((err as Error).message || 'Failed to load school details');
+=======
+        if (error) throw error;
+        setSchool(data);
+      } catch (err: any) {
+        console.error("Error fetching school:", err);
+        setError(err.message || "Failed to load school details");
+>>>>>>> Stashed changes
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchSchoolDetails();
   }, [id]);
 
+<<<<<<< Updated upstream
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -98,6 +142,22 @@ export default function SchoolDetailsPage() {
   if (error) {
     return <div className="p-8 text-red-600">Error: {error}</div>;
   }
+=======
+  // Loading & Error States
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-lg">
+        Loading...
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        Error: {error}
+      </div>
+    );
+>>>>>>> Stashed changes
 
   if (!school) {
     return <div className="p-8">School not found</div>;
@@ -107,6 +167,7 @@ export default function SchoolDetailsPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
+<<<<<<< Updated upstream
       <h1 className="pt-30 text-2xl font-bold mb-4">School Data</h1>
       <div className="space-y-2">
         <p><strong>ID:</strong> {school.id}</p>
@@ -117,6 +178,150 @@ export default function SchoolDetailsPage() {
         <p><strong>Details:</strong> {school.details}</p>
         {school.critique_review && (
           <p><strong>Review:</strong> {school.critique_review}</p>
+=======
+      {/* ===== Hero Banner Section ===== */}
+      <div
+        className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
+        }`}
+      >
+        {/* Back Button */}
+        <div className="fixed top-24 left-3 z-10">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 px-4 py-2 transition-all duration-200"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Top Banner with Overlay and Title */}
+        <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
+          <img
+            src={school.school_picture || "/placeholder-picture.png"}
+            alt={`${school.name} background`}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FFDE59] via-[#FFDE59]/80 to-transparent pointer-events-none"></div>
+
+          {/* School Name */}
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-7xl mx-auto w-full px-7">
+              <h1 className="text-4xl md:text-5xl font-outfit font-bold text-gray-900 leading-tight max-w-md">
+                {school.name}
+              </h1>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Yellow Stripe Below Banner ===== */}
+      <div
+        className={`w-full h-7 bg-[#FFDE59] transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
+        }`}
+        style={{ transitionDelay: "200ms" }}
+      ></div>
+
+      {/* ===== Main Content Grid ===== */}
+      <div
+        className={`grid grid-cols-1 lg:grid-cols-2 items-center gap-5 px-8 md:px-30 pt-20 transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
+        style={{ transitionDelay: "400ms" }}
+      >
+        {/* Left Side - School Logo */}
+        <div className="flex justify-center">
+          <img
+            src={school.school_logo || "/placeholder-logo.png"}
+            alt={`${school.name} logo`}
+            className="w-60 h-60 object-contain mb-4"
+          />
+        </div>
+
+        {/* Right Side - School Info */}
+        <div className="flex flex-col justify-start w-[80%] space-y-6">
+          <div>
+            <h2 className="text-3xl font-outfit font-bold mb-2 text-gray-900 leading-tight">
+              {school.name}
+            </h2>
+            <p className="text-lg font-fredoka text-gray-600">
+              {school.location}
+            </p>
+          </div>
+
+          <div className="text-gray-700 text-base leading-relaxed space-y-2">
+            <p>
+              <strong>Email:</strong> {school.institutional_email}
+            </p>
+            <p>
+              <strong>Contact:</strong> {school.contact_number}
+            </p>
+            <p className="flex items-center gap-2">
+              <strong>Critique Review:</strong>
+              <span className="text-gray-800 font-fredoka">
+                {school.critique_review ?? "⭐ 4.78"}
+              </span>
+            </p>
+          </div>
+
+          <div className="pt-6 border-t border-gray-200">
+            <h3 className="text-xl font-outfit font-semibold mb-3 text-gray-900">
+              School Details
+            </h3>
+            <p className="text-gray-700 font-fredoka whitespace-pre-wrap leading-relaxed">
+              {school.details || "No additional details available."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Student Reviews Section ===== */}
+      <ReviewSection schoolId={school.id} />
+
+      {/* ===== Nearby Schools Section ===== */}
+      <div
+        className={`w-full bg-[#FFDE59] py-10 px-15 transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
+        style={{ transitionDelay: "600ms" }}
+      >
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold font-outfit text-gray-800 mb-10 pl-10">
+            Explore <span className="text-white">Nearby Universities</span>
+          </h2>
+        </div>
+
+        {nearbyLoading ? (
+          <p className="text-center text-gray-800 font-fredoka">
+            Finding nearby schools...
+          </p>
+        ) : locationError ? (
+          <p className="text-center text-red-600 font-fredoka">
+            {locationError}
+          </p>
+        ) : nearbySchools.length > 0 ? (
+          <div className="max-w-[1300px] mx-auto">
+            <NearbySchoolCarousel school_card={nearbySchools} />
+          </div>
+        ) : (
+          <p className="text-center text-gray-800 font-fredoka">
+            No nearby schools found.
+          </p>
+>>>>>>> Stashed changes
         )}
         <p><strong>Logo URL:</strong> {school.school_logo}</p>
         <p><strong>Picture URL:</strong> {school.school_picture}</p>
