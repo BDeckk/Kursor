@@ -9,6 +9,9 @@ import Navbar from "@/components/homepage-navbar";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ReviewSection from "@/components/reviews/SchoolReviews";
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 interface School {
@@ -25,6 +28,7 @@ interface School {
 
 export default function SchoolDetailsPage() {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const params = useParams();
   const id = params?.id as string;
   
@@ -33,6 +37,8 @@ export default function SchoolDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
 =======
+=======
+>>>>>>> Stashed changes
   const { id } = useParams() as { id: string };
   const router = useRouter();
 
@@ -51,6 +57,9 @@ export default function SchoolDetailsPage() {
   }, []);
 
   // Fetch school data from Supabase
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   useEffect(() => {
     if (!id) return;
@@ -58,6 +67,7 @@ export default function SchoolDetailsPage() {
     const fetchSchoolDetails = async () => {
       setLoading(true);
       try {
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         setLoading(true);
         
@@ -67,6 +77,8 @@ export default function SchoolDetailsPage() {
           .select('*')
           .eq('id', id)
 =======
+=======
+>>>>>>> Stashed changes
         const { data, error } = await supabase
           .from("schools")
           .select("*")
@@ -92,6 +104,7 @@ export default function SchoolDetailsPage() {
           return;
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Get public URLs for images from storage
         let logoUrl = '';
@@ -120,11 +133,16 @@ export default function SchoolDetailsPage() {
         console.error('Error fetching school:', err);
         setError((err as Error).message || 'Failed to load school details');
 =======
+=======
+>>>>>>> Stashed changes
         if (error) throw error;
         setSchool(data);
       } catch (err: any) {
         console.error("Error fetching school:", err);
         setError(err.message || "Failed to load school details");
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       } finally {
         setLoading(false);
@@ -135,6 +153,7 @@ export default function SchoolDetailsPage() {
   }, [id]);
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -143,6 +162,8 @@ export default function SchoolDetailsPage() {
     return <div className="p-8 text-red-600">Error: {error}</div>;
   }
 =======
+=======
+>>>>>>> Stashed changes
   // Loading & Error States
   if (loading)
     return (
@@ -321,6 +342,9 @@ export default function SchoolDetailsPage() {
           <p className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
           </p>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         )}
         <p><strong>Logo URL:</strong> {school.school_logo}</p>
