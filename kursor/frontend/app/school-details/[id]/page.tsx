@@ -1,21 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { supabase } from "@/supabaseClient";
-<<<<<<< Updated upstream
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/homepage-navbar";
-=======
+import { supabase } from "@/supabaseClient";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ReviewSection from "@/components/reviews/SchoolReviews";
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 interface School {
   id: string;
@@ -30,21 +21,6 @@ interface School {
 }
 
 export default function SchoolDetailsPage() {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  const params = useParams();
-  const id = params?.id as string;
-  
-  const [school, setSchool] = useState<School | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   const { id } = useParams() as { id: string };
   const router = useRouter();
 
@@ -53,8 +29,11 @@ export default function SchoolDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
-  const { nearbySchools, loading: nearbyLoading, error: locationError } =
-    useNearbySchools();
+  const {
+    nearbySchools,
+    loading: nearbyLoading,
+    error: locationError,
+  } = useNearbySchools();
 
   // Entrance animation
   useEffect(() => {
@@ -62,106 +41,24 @@ export default function SchoolDetailsPage() {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Fetch school data from Supabase
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+  // Fetch school data
   useEffect(() => {
     if (!id) return;
 
     const fetchSchoolDetails = async () => {
       setLoading(true);
       try {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        setLoading(true);
-        
-        // Fetch school data from Supabase
         const { data, error: fetchError } = await supabase
-          .from('schools')
-          .select('*')
-          .eq('id', id)
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-        const { data, error } = await supabase
           .from("schools")
           .select("*")
           .eq("id", id)
->>>>>>> Stashed changes
           .single();
-        
-        console.log('Fetch result:', { data, fetchError });
-        
-        if (fetchError) {
-          console.error('Supabase error details:', {
-            message: fetchError.message,
-            details: fetchError.details,
-            hint: fetchError.hint,
-            code: fetchError.code
-          });
-          throw new Error(`Database error: ${fetchError.message}`);
-        }
-        
-        if (!data) {
-          setSchool(null);
-          setLoading(false);
-          return;
-        }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        // Get public URLs for images from storage
-        let logoUrl = '';
-        let pictureUrl = '';
-
-        if (data.school_logo) {
-          const { data: logoData } = supabase.storage
-            .from('school_logos')
-            .getPublicUrl(data.school_logo);
-          if (logoData) logoUrl = logoData.publicUrl;
-        }
-
-        if (data.school_picture) {
-          const { data: pictureData } = supabase.storage
-            .from('school_picture')
-            .getPublicUrl(data.school_picture);
-          if (pictureData) pictureUrl = pictureData.publicUrl;
-        }
-
-        setSchool({
-          ...data,
-          school_logo: logoUrl,
-          school_picture: pictureUrl
-        } as School);
-      } catch (err) {
-        console.error('Error fetching school:', err);
-        setError((err as Error).message || 'Failed to load school details');
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-        if (error) throw error;
+        if (fetchError) throw new Error(fetchError.message);
         setSchool(data);
-      } catch (err: any) {
+      } catch (err) {
         console.error("Error fetching school:", err);
-        setError(err.message || "Failed to load school details");
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+        setError((err as Error).message || "Failed to load school details");
       } finally {
         setLoading(false);
       }
@@ -170,21 +67,6 @@ export default function SchoolDetailsPage() {
     fetchSchoolDetails();
   }, [id]);
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  if (loading) {
-    return <div className="p-8">Loading...</div>;
-  }
-
-  if (error) {
-    return <div className="p-8 text-red-600">Error: {error}</div>;
-  }
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   // Loading & Error States
   if (loading)
     return (
@@ -199,28 +81,18 @@ export default function SchoolDetailsPage() {
         Error: {error}
       </div>
     );
->>>>>>> Stashed changes
 
-  if (!school) {
-    return <div className="p-8">School not found</div>;
-  }
+  if (!school)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        School not found.
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
 
-<<<<<<< Updated upstream
-      <h1 className="pt-30 text-2xl font-bold mb-4">School Data</h1>
-      <div className="space-y-2">
-        <p><strong>ID:</strong> {school.id}</p>
-        <p><strong>Name:</strong> {school.name}</p>
-        <p><strong>Location:</strong> {school.location}</p>
-        <p><strong>Email:</strong> {school.institutional_email}</p>
-        <p><strong>Contact:</strong> {school.contact_number}</p>
-        <p><strong>Details:</strong> {school.details}</p>
-        {school.critique_review && (
-          <p><strong>Review:</strong> {school.critique_review}</p>
-=======
       {/* ===== Hero Banner Section ===== */}
       <div
         className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
@@ -231,7 +103,7 @@ export default function SchoolDetailsPage() {
         <div className="fixed top-24 left-3 z-10">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-4 py-2 transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2 bg-transparent transition-all duration-200"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -250,7 +122,7 @@ export default function SchoolDetailsPage() {
           </button>
         </div>
 
-        {/* Top Banner with Overlay and Title */}
+        {/* Top Banner */}
         <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
           <img
             src={school.school_picture || "/placeholder-picture.png"}
@@ -259,7 +131,6 @@ export default function SchoolDetailsPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#FFDE59] via-[#FFDE59]/80 to-transparent pointer-events-none"></div>
 
-          {/* School Name */}
           <div className="absolute inset-0 flex items-center">
             <div className="max-w-7xl mx-auto w-full px-7">
               <h1 className="text-4xl md:text-5xl font-outfit font-bold text-gray-900 leading-tight max-w-md">
@@ -270,7 +141,7 @@ export default function SchoolDetailsPage() {
         </div>
       </div>
 
-      {/* ===== Yellow Stripe Below Banner ===== */}
+      {/* ===== Yellow Stripe ===== */}
       <div
         className={`w-full h-7 bg-[#FFDE59] transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
@@ -278,23 +149,25 @@ export default function SchoolDetailsPage() {
         style={{ transitionDelay: "200ms" }}
       ></div>
 
-      {/* ===== Main Content Grid ===== */}
+      {/* ===== Main Content ===== */}
       <div
         className={`grid grid-cols-1 lg:grid-cols-2 items-center gap-5 px-8 md:px-30 pt-20 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
         style={{ transitionDelay: "400ms" }}
       >
-        {/* Left Side - School Logo */}
+        {/* Left: Logo */}
         <div className="flex justify-center">
-          <img
-            src={school.school_logo || "/placeholder-logo.png"}
-            alt={`${school.name} logo`}
-            className="w-60 h-60 object-contain mb-4"
-          />
+          <div className="flex flex-col items-center">
+            <img
+              src={school.school_logo || "/placeholder-logo.png"}
+              alt={`${school.name} logo`}
+              className="w-100 h-100 object-contain mb-4"
+            />
+          </div>
         </div>
 
-        {/* Right Side - School Info */}
+        {/* Right: Info */}
         <div className="flex flex-col justify-start w-[80%] space-y-6">
           <div>
             <h2 className="text-3xl font-outfit font-bold mb-2 text-gray-900 leading-tight">
@@ -363,17 +236,8 @@ export default function SchoolDetailsPage() {
           <p className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
           </p>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
         )}
-        <p><strong>Logo URL:</strong> {school.school_logo}</p>
-        <p><strong>Picture URL:</strong> {school.school_picture}</p>
       </div>
     </div>
   );
-} 
+}

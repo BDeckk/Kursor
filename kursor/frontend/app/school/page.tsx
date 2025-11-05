@@ -1,35 +1,18 @@
 "use client";
 
 import Navbar from "@/components/homepage-navbar";
+import { TopUniversitiesCarousel } from "@/components/TopUniversitiesCarousel";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
+import { UserAuth } from "@/Context/AuthContext";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
 import { supabase } from "@/supabaseClient";
->>>>>>> Stashed changes
-=======
-import { supabase } from "@/supabaseClient";
->>>>>>> Stashed changes
-=======
-import { supabase } from "@/supabaseClient";
->>>>>>> Stashed changes
 import { useState, useEffect } from "react";
 
 export default function SchoolPage() {
   const { nearbySchools, loading, error: locationError } = useNearbySchools();
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
   const { session } = UserAuth();
   const user = session?.user;
->>>>>>> Stashed changes
+
   const [isVisible, setIsVisible] = useState(false);
   const [universities, setUniversities] = useState<any[]>([]);
   const [topLoading, setTopLoading] = useState(false);
@@ -37,6 +20,7 @@ export default function SchoolPage() {
 
   useEffect(() => setIsVisible(true), []);
 
+  // Cache Handler
   const handleLocalCache = (newUnis?: any[]) => {
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
@@ -49,6 +33,7 @@ export default function SchoolPage() {
     }
   };
 
+  // Fetch Top Universities
   useEffect(() => {
     const fetchTopUniversities = async () => {
       setTopLoading(true);
@@ -57,7 +42,7 @@ export default function SchoolPage() {
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-        // Always check Supabase first (truth source)
+        // Try Supabase first (source of truth)
         const { data: supaData, error: supaError } = await supabase
           .from("top_universities")
           .select("*")
@@ -70,27 +55,27 @@ export default function SchoolPage() {
         if (supaData && supaData.length > 0) {
           console.log("✅ Using Supabase data (this month)");
           setUniversities(supaData);
-          handleLocalCache(supaData); // keep in sync with localStorage
+          handleLocalCache(supaData);
           return;
         }
 
-        console.log("⚠️ No Supabase data — clearing cache and checking API");
+        console.log("⚠️ No Supabase data — fetching from API…");
 
-        // Clear stale local cache if DB is empty
+        // Clear stale cache
         localStorage.removeItem("top_universities_data");
         localStorage.removeItem("top_universities_month");
 
-        // Call API if nothing in DB
+        // Fetch from API (Gemini-powered endpoint)
         const res = await fetch("/api/top-universities");
         const json = await res.json();
 
         if (!res.ok) throw new Error(json.error || "Failed to fetch universities");
         const newUnis = json.topUniversities || [];
 
-        // Clean old DB rows
+        // Clean up old records
         await supabase.from("top_universities").delete().lt("created_at", firstDay);
 
-        // Store new data if any
+        // Insert fresh data
         if (newUnis.length > 0) {
           const { error: insertError } = await supabase.from("top_universities").insert(
             newUnis.map((u: any) => ({
@@ -102,9 +87,11 @@ export default function SchoolPage() {
               created_at: new Date().toISOString(),
             }))
           );
-          if (insertError)
+          if (insertError) {
             console.error("⚠️ Failed to store new data:", insertError.message);
-          else console.log("✅ Stored new top universities in Supabase (this month)");
+          } else {
+            console.log("✅ Stored new top universities in Supabase (this month)");
+          }
         }
 
         handleLocalCache(newUnis);
@@ -113,7 +100,7 @@ export default function SchoolPage() {
         console.error("❌ Error fetching top universities:", err);
         setTopError(err.message || "Unknown error");
 
-        //  If Supabase fails, fallback to localStorage cache
+        // Fallback: local cache
         const cachedData = localStorage.getItem("top_universities_data");
         if (cachedData) {
           console.log("⚡ Using fallback localStorage cache");
@@ -131,7 +118,7 @@ export default function SchoolPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* Universities Near Your Location */}
+      {/* === Nearby Universities Section === */}
       <div className="max-w-7xl mx-auto py-12 px-6 pt-[7%]">
         <h2 className="text-3xl font-bold text-gray-800 mb-8">
           Universities and Schools{" "}
@@ -140,14 +127,12 @@ export default function SchoolPage() {
 
         {loading ? (
           <div className="text-center text-gray-800 font-fredoka">
-            Finding nearby schools...
+            Finding nearby schools…
           </div>
         ) : locationError ? (
-          <div className="text-center text-red-600 font-fredoka">
-            {locationError}
-          </div>
+          <div className="text-center text-red-600 font-fredoka">{locationError}</div>
         ) : nearbySchools.length > 0 ? (
-          <NearbySchoolCarousel school_card={nearbySchools} />
+          <NearbySchoolCarousel school_card={nearbySchools} userId={user?.id ?? ""} />
         ) : (
           <div className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
@@ -155,7 +140,7 @@ export default function SchoolPage() {
         )}
       </div>
 
-      {/* Top Performing Universities */}
+      {/* === Top Performing Universities Section === */}
       <div
         className={`w-full bg-[#FFD31F] py-12 px-6 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -167,37 +152,23 @@ export default function SchoolPage() {
             Top Performing <span className="text-white">Universities</span>
           </h2>
 
-          {loading ? (
+          {topLoading ? (
             <div className="text-center text-gray-800 font-fredoka">
-              Finding nearby schools...
+              Ranking universities via Gemini…
             </div>
-          ) : locationError ? (
-            <div className="text-center text-red-600 font-fredoka">
-              {locationError}
-            </div>
-          ) : nearbySchools.length > 0 ? (
-            <NearbySchoolCarousel school_card={nearbySchools} />
+          ) : topError ? (
+            <div className="text-center text-red-600 font-fredoka">{topError}</div>
+          ) : universities.length > 0 ? (
+            <TopUniversitiesCarousel universities={universities} userId={user?.id ?? ""} />
           ) : (
             <div className="text-center text-gray-800 font-fredoka">
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-              No nearby schools found.
-=======
               No top universities found for this month.
->>>>>>> Stashed changes
-=======
-              No top universities found for this month.
->>>>>>> Stashed changes
-=======
-              No top universities found for this month.
->>>>>>> Stashed changes
             </div>
           )}
         </div>
       </div>
 
-      {/* Recommended Universities */}
+      {/* === Recommended Universities Section === */}
       <div className="max-w-7xl mx-auto py-12 px-6">
         <h2 className="text-3xl font-bold text-gray-800 mb-8">
           Recommended Universities Based on{" "}
@@ -205,15 +176,11 @@ export default function SchoolPage() {
         </h2>
 
         {loading ? (
-          <div className="text-center text-gray-800 font-fredoka">
-            Finding nearby schools...
-          </div>
+          <div className="text-center text-gray-800 font-fredoka">Finding nearby schools…</div>
         ) : locationError ? (
-          <div className="text-center text-red-600 font-fredoka">
-            {locationError}
-          </div>
+          <div className="text-center text-red-600 font-fredoka">{locationError}</div>
         ) : nearbySchools.length > 0 ? (
-          <NearbySchoolCarousel school_card={nearbySchools} />
+          <NearbySchoolCarousel school_card={nearbySchools} userId={user?.id ?? ""} />
         ) : (
           <div className="text-center text-gray-800 font-fredoka">
             No nearby schools found.
