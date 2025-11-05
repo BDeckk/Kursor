@@ -10,6 +10,9 @@ import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ReviewSection from "@/components/reviews/SchoolReviews";
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -29,6 +32,7 @@ interface School {
 export default function SchoolDetailsPage() {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   const params = useParams();
   const id = params?.id as string;
   
@@ -37,6 +41,8 @@ export default function SchoolDetailsPage() {
   const [error, setError] = useState<string | null>(null);
 
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   const { id } = useParams() as { id: string };
@@ -58,6 +64,9 @@ export default function SchoolDetailsPage() {
 
   // Fetch school data from Supabase
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -69,6 +78,7 @@ export default function SchoolDetailsPage() {
       try {
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         setLoading(true);
         
         // Fetch school data from Supabase
@@ -77,6 +87,8 @@ export default function SchoolDetailsPage() {
           .select('*')
           .eq('id', id)
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         const { data, error } = await supabase
@@ -104,6 +116,7 @@ export default function SchoolDetailsPage() {
           return;
         }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
         // Get public URLs for images from storage
@@ -135,12 +148,17 @@ export default function SchoolDetailsPage() {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         if (error) throw error;
         setSchool(data);
       } catch (err: any) {
         console.error("Error fetching school:", err);
         setError(err.message || "Failed to load school details");
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -154,6 +172,7 @@ export default function SchoolDetailsPage() {
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   if (loading) {
     return <div className="p-8">Loading...</div>;
   }
@@ -162,6 +181,8 @@ export default function SchoolDetailsPage() {
     return <div className="p-8 text-red-600">Error: {error}</div>;
   }
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   // Loading & Error States
@@ -343,6 +364,9 @@ export default function SchoolDetailsPage() {
             No nearby schools found.
           </p>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes

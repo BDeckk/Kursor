@@ -5,6 +5,10 @@ import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+import { supabase } from "@/supabaseClient";
+>>>>>>> Stashed changes
 =======
 import { supabase } from "@/supabaseClient";
 >>>>>>> Stashed changes
@@ -17,7 +21,10 @@ export default function SchoolPage() {
   const { nearbySchools, loading, error: locationError } = useNearbySchools();
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
   const { session } = UserAuth();
@@ -174,7 +181,11 @@ export default function SchoolPage() {
             <div className="text-center text-gray-800 font-fredoka">
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
               No nearby schools found.
+=======
+              No top universities found for this month.
+>>>>>>> Stashed changes
 =======
               No top universities found for this month.
 >>>>>>> Stashed changes
