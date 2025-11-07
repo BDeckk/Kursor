@@ -9,6 +9,7 @@ if (!geminiApiKey) {
 
 const genAI = new GoogleGenerativeAI(geminiApiKey || "");
 
+// Program interface
 interface Program {
   id: string;
   title: string;
@@ -17,82 +18,74 @@ interface Program {
   riasec_tags: string[];
 }
 
-// Improved prompt with JSON output format
+/** Utility: normalize text for matching */
+function normalizeString(str: string): string {
+  return str.toLowerCase().trim().replace(/\s+/g, " ").replace(/[^\w\s]/g, "");
+}
+
+/** Structured prompt for Gemini (low temperature = consistent results) */
 function buildPrompt(riasecCode: string, programs: Program[]): string {
   return `
-You are a career recommendation system.
-Your task is to suggest the best 10 programs for a student based on their RIASEC code.
+You are a strict recommendation system. 
+Your task: choose exactly 10 program titles that best match the given RIASEC code.
 
 RIASEC Code: ${riasecCode}
 
-Available Programs:
+List of available programs (with RIASEC tags):
 ${programs
-    .map(
-      (p, idx) => `${idx + 1}. Title: "${p.title}"
-   School: ${p.school}
-   Description: ${p.description}
-   RIASEC Tags: ${p.riasec_tags.join(", ")}`
-    )
-    .join("\n\n")}
+  .map(
+    (p, idx) =>
+      `${idx + 1}. "${p.title}" — Tags: ${p.riasec_tags.join(", ")}`
+  )
+  .join("\n")}
 
-IMPORTANT: Based on the RIASEC code provided, suggest the top 10 programs from the list above.
-You MUST return ONLY the exact program titles as they appear above, nothing else.
-Format your response as a JSON array of exact titles from the list.
-
-Example format:
-["Program Title A", "Program Title B", "Program Title C"]
-
-Return ONLY the JSON array, no additional text.
+Return a JSON array containing exactly 10 titles from the list above.
+Return ONLY a valid JSON array like this:
+["Program A", "Program B", "Program C", ...]
+No extra text, no explanations.
 `;
 }
 
-// Normalize string for better matching
-function normalizeString(str: string): string {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/[^\w\s]/g, "");
-}
-
-// Better matching function
-function findMatchingPrograms(
-  geminiTitles: string[],
-  allPrograms: Program[]
-): Program[] {
+/** Tries to match Gemini output titles to Supabase programs */
+function findMatchingPrograms(geminiTitles: string[], allPrograms: Program[]): Program[] {
   const matched: Program[] = [];
-  
-  for (const geminiTitle of geminiTitles) {
-    const normalizedGemini = normalizeString(geminiTitle);
-    
-    // Try exact match first
-    let found = allPrograms.find(
-      (p) => normalizeString(p.title) === normalizedGemini
-    );
-    
-    // If no exact match, try fuzzy match
-    if (!found) {
-      found = allPrograms.find((p) => {
-        const normalizedProgram = normalizeString(p.title);
-        return (
-          normalizedProgram.includes(normalizedGemini) ||
-          normalizedGemini.includes(normalizedProgram)
-        );
-      });
-    }
-    
+
+  for (const title of geminiTitles) {
+    const normalized = normalizeString(title);
+    let found =
+      allPrograms.find((p) => normalizeString(p.title) === normalized) ||
+      allPrograms.find((p) => normalizeString(p.title).includes(normalized)) ||
+      allPrograms.find((p) => normalized.includes(normalizeString(p.title)));
+
     if (found && !matched.some((p) => p.id === found.id)) {
       matched.push(found);
     }
   }
-  
+
   return matched;
 }
 
+/** Deterministic fallback: picks programs whose tags match RIASEC code */
+function fallbackRecommendations(riasecCode: string, programs: Program[]): Program[] {
+  const matched = programs.filter((p) =>
+    p.riasec_tags?.some((tag) => riasecCode.includes(tag.toUpperCase()))
+  );
+
+  // Sort by number of matching tags (most relevant first)
+  const scored = matched
+    .map((p) => ({
+      ...p,
+      matchCount: p.riasec_tags.filter((t) => riasecCode.includes(t.toUpperCase())).length,
+    }))
+    .sort((a, b) => b.matchCount - a.matchCount);
+
+  return scored.slice(0, 10);
+}
+
+/** POST handler */
 export async function POST(req: Request) {
   try {
     const { riasecCode }: { riasecCode: string } = await req.json();
-    console.log("➡️ Received RIASEC code:", riasecCode);
 
     if (!riasecCode) {
       return NextResponse.json(
@@ -107,96 +100,73 @@ export async function POST(req: Request) {
       .select("*")
       .returns<Program[]>();
 
-    if (error) {
-      console.error("❌ Supabase query error:", error);
-      throw new Error(`Failed to fetch programs from Supabase: ${error.message}`);
-    }
-
-    if (!programs || programs.length === 0) {
-      console.warn("⚠️ No programs found in Supabase.");
+    if (error) throw new Error(`Supabase error: ${error.message}`);
+    if (!programs?.length) {
       return NextResponse.json(
-        { message: "No programs available for recommendation." },
+        { message: "No programs found in Supabase." },
         { status: 200 }
       );
     }
 
-    console.log(`✅ Fetched ${programs.length} programs from Supabase.`);
-
-    // Build prompt
+    // Build and send prompt
     const prompt = buildPrompt(riasecCode, programs);
 
-    if (!geminiApiKey) {
-      return NextResponse.json(
-        { error: "Gemini API key is not configured." },
-        { status: 500 }
-      );
-    }
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash-exp",
+      generationConfig: { temperature: 0.0 }, // ✅ deterministic
+    });
 
-    // Call Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
     const result = await model.generateContent(prompt);
-    const geminiResponseText = result.response.text();
-    console.log("✅ Gemini raw response:", geminiResponseText);
+    const geminiText = result.response.text().trim();
 
-    // Parse Gemini response
+    // Try parsing JSON response
     let parsedTitles: string[] = [];
-    
     try {
-      // Try to extract JSON array from response
-      const jsonMatch = geminiResponseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        parsedTitles = JSON.parse(jsonMatch[0]);
-        console.log("✅ Parsed JSON titles:", parsedTitles);
-      } else {
-        throw new Error("No JSON array found");
-      }
-    } catch (parseError) {
-      // Fallback: parse line by line
-      console.warn("⚠️ JSON parsing failed, using line-by-line parsing");
-      parsedTitles = geminiResponseText
-        .split("\n")
-        .map((line) => line.replace(/^\d+\.\s*/, "").trim())
-        .map((line) => line.replace(/^["']|["']$/g, "")) // Remove quotes
-        .filter((line) => line && line.length > 3);
-      console.log("✅ Parsed line titles:", parsedTitles);
+      const match = geminiText.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error("No JSON array found");
+      parsedTitles = JSON.parse(match[0]);
+      if (!Array.isArray(parsedTitles)) throw new Error("Invalid array format");
+    } catch {
+      console.warn("⚠️ Gemini response not valid JSON, skipping AI output");
+      parsedTitles = [];
     }
 
-    // Match programs
-    const matchedPrograms = findMatchingPrograms(parsedTitles, programs);
-    console.log(`✅ Matched ${matchedPrograms.length} programs`);
+    // Try matching
+    let matchedPrograms = parsedTitles.length
+      ? findMatchingPrograms(parsedTitles, programs)
+      : [];
 
-    // If we matched fewer than expected, log for debugging
-    if (matchedPrograms.length < parsedTitles.length) {
-      console.warn(
-        `⚠️ Only matched ${matchedPrograms.length}/${parsedTitles.length} programs`
-      );
-      console.warn("Unmatched titles:", 
-        parsedTitles.filter(
-          (title) => !matchedPrograms.some((p) => 
-            normalizeString(p.title) === normalizeString(title)
-          )
-        )
-      );
+    // Fallback deterministic if Gemini fails or low matches
+    if (matchedPrograms.length < 5) {
+      console.warn("⚠️ Using fallback deterministic recommendation logic");
+      matchedPrograms = fallbackRecommendations(riasecCode, programs);
     }
 
-    // Return recommendations
+    // Final recommendations (max 10)
+    const recommendations = matchedPrograms.slice(0, 10).map((p) => ({
+      id: p.id,
+      title: p.title,
+      school: p.school,
+      reason: p.description || "No description available",
+    }));
+
+    // Debug output (only in dev)
+    if (process.env.NODE_ENV === "development") {
+      console.log("✅ Final Recommendations:", recommendations.map((r) => r.title));
+    }
+
     return NextResponse.json({
-      recommendations: matchedPrograms.slice(0, 10).map((p) => ({
-        id: p.id,
-        title: p.title,
-        school: p.school,
-        reason: p.description || "No description available",
-      })),
-      raw: geminiResponseText,
+      recommendations,
       debug: {
-        parsedTitles,
+        riasecCode,
+        geminiUsed: parsedTitles.length > 0,
         matchedCount: matchedPrograms.length,
       },
     });
   } catch (err: any) {
-    console.error("❌ API error:", err);
+    console.error("❌ Recommendation API error:", err);
     return NextResponse.json(
-      { error: err.message || "An unexpected error occurred." },
+      { error: err.message || "Unexpected server error." },
       { status: 500 }
     );
   }
