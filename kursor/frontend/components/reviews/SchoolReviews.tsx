@@ -237,8 +237,8 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
       <div className="mb-10 border-b-10 border-[#FFD31F] w-full rounded-full"></div>
       <div className="pl-[10%] pr-[10%]">
         <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-2 font-outfit">
-          Student Reviews <span className="text-yellow-400 text-3xl">7.52</span>
-            <img src='/star-filled.png' className="w-12 h-12"/>
+          Student Reviews:  <span className="text-yellow-400 text-3xl">7.52</span>
+            <img src='/star-filled.png' className="w-10 h-10"/>
         </h2>
 
         {/* Write Review */}
@@ -286,13 +286,13 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                 {/* Header (username + rating beside it) */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <p className="font-semibold text-gray-900">@{review.username}</p>
+                    <p className="font-semibold text-[17px] text-gray-900">{review.username}</p>
                     <div className="flex gap-1">
                       {[1, 2, 3, 4, 5].map((s) => (
                         <img
                           key={s}
                           src={s <= review.rating ? "/star-filled.png" : "/star-outline.png"}
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           alt="rating star"
                         />
                       ))}
@@ -309,12 +309,15 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                     onClick={() => handleLikeReview(review.id)}
                     className="flex items-center gap-2 hover:opacity-80 transition"
                   >
-                    <img
-                      src={review.liked ? "/heart-filled.png" : "/heart.png"}
-                      alt="like"
-                      className="w-5 h-5 transition-transform hover:scale-110"
-                    />
-
+                    {review.liked ? (
+                      <svg className="w-5 h-5 fill-yellow-500 transition-transform hover:scale-110" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 stroke-gray-700 fill-none transition-transform hover:scale-110" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    )}
                     <span className="text-gray-700 text-sm">{review.likes}</span>
                   </button>
 
@@ -322,7 +325,9 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                     onClick={() => setReplyingTo({ id: review.id, type: "review" })}
                     className="flex items-center gap-2 hover:opacity-80 transition"
                   >
-                    <img src="/comment.png" alt="reply" className="w-5 h-5" />
+                    <svg className="w-5 h-5 stroke-gray-700 fill-none transition-transform hover:scale-110" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                    </svg>
                     <span className="text-gray-700 text-sm">Reply</span>
                   </button>
                 </div>
@@ -331,9 +336,9 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                 {review.replies.length > 0 && (
                   <div className="mt-4 ml-6 border-l-2 border-yellow-300 pl-4 space-y-3">
                     {review.replies.map((reply) => (
-                     <div key={reply.id} className="bg-white rounded-2xl p-3 border border-yellow-100">
+                     <div key={reply.id} className="bg-[#FFF7D8] rounded-2xl p-3 border border-yellow-100">
                         {/* Username */}
-                        <p className="font-semibold text-sm mb-1">@{reply.username}</p>
+                        <p className="font-semibold text-sm mb-1">{reply.username}</p>
 
                         {/* Reply body */}
                         <p className="text-sm text-gray-600">{reply.text}</p>
@@ -344,11 +349,15 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                             onClick={() => handleLikeReply(reply.id)}
                             className="flex items-center gap-1 hover:opacity-80 transition"
                           >
-                            <img
-                              src={reply.liked ? "/heart-filled.png" : "/heart.png"}
-                              alt="like"
-                              className="w-4 h-4 transition-transform hover:scale-110"
-                            />
+                            {reply.liked ? (
+                              <svg className="w-4 h-4 fill-yellow-500 transition-transform hover:scale-110" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4 stroke-gray-600 fill-none transition-transform hover:scale-110" strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                              </svg>
+                            )}
                             <span className="text-xs text-gray-600">{reply.likes}</span>
                           </button>
 
@@ -356,7 +365,9 @@ export default function ReviewSection({ schoolId }: ReviewSectionProps) {
                             onClick={() => setReplyingTo({ id: reply.id, type: "reply" })}
                             className="flex items-center gap-1 hover:opacity-80 transition"
                           >
-                            <img src="/comment.png" alt="reply" className="w-4 h-4" />
+                            <svg className="w-4 h-4 stroke-gray-600 fill-none transition-transform hover:scale-110" strokeWidth="2" viewBox="0 0 24 24">
+                              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+                            </svg>
                             <span className="text-xs text-gray-600">Reply</span>
                           </button>
                         </div>

@@ -7,6 +7,7 @@ import { supabase } from "@/supabaseClient";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ReviewSection from "@/components/reviews/SchoolReviews";
+import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 
 interface School {
   id: string;
@@ -24,22 +25,23 @@ export default function SchoolDetailsPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
 
+  const { setIsLoading } = useGlobalLoading();
+
   const [school, setSchool] = useState<School | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageReady, setPageReady] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // Track image loading states
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [pictureLoaded, setPictureLoaded] = useState(false);
 
   const {
     nearbySchools,
     loading: nearbyLoading,
     error: locationError,
   } = useNearbySchools();
-
-  // Entrance animation
-  useEffect(() => {
-    const timeout = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timeout);
-  }, []);
 
   // Fetch school data
   useEffect(() => {
@@ -67,37 +69,96 @@ export default function SchoolDetailsPage() {
     fetchSchoolDetails();
   }, [id]);
 
-  // Loading & Error States
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-lg">
-        Loading...
-      </div>
-    );
+  // Preload images
+  useEffect(() => {
+    if (!school) return;
 
-  if (error)
+    const logoImg = new Image();
+    const pictureImg = new Image();
+
+    logoImg.onload = () => setLogoLoaded(true);
+    logoImg.onerror = () => setLogoLoaded(true); // Still mark as loaded even on error
+
+    pictureImg.onload = () => setPictureLoaded(true);
+    pictureImg.onerror = () => setPictureLoaded(true);
+
+    logoImg.src = school.school_logo || "/placeholder-logo.png";
+    pictureImg.src = school.school_picture || "/placeholder-picture.png";
+  }, [school]);
+
+  // Wait for all data to be ready before showing page
+  useEffect(() => {
+    const imagesReady = school ? (logoLoaded && pictureLoaded) : false;
+    const dataReady = !loading && school !== null;
+
+    if (loading || nearbyLoading || !dataReady || !imagesReady) {
+      setIsLoading(true);
+    } else {
+      const t = setTimeout(() => {
+        setPageReady(true);
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 50);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [loading, nearbyLoading, school, logoLoaded, pictureLoaded, setIsLoading]);
+
+  // Don't show content until everything is ready
+  if (!pageReady) {
+    return null;
+  }
+
+  // Error States
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
-        Error: {error}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Error Loading School</h2>
+          <p>{error}</p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-6 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
+  }
 
-  if (!school)
+  if (!school) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
-        School not found.
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">School Not Found</h2>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-6 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
+  }
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      {/* Navbar with fade-in */}
+      <div
+        className={`transition-opacity duration-500 ${
+          isVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <Navbar />
+      </div>
 
       {/* ===== Hero Banner Section ===== */}
       <div
         className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
         }`}
+        style={{ transitionDelay: "200ms" }}
       >
         {/* Back Button */}
         <div className="fixed top-24 left-3 z-10">
@@ -146,7 +207,7 @@ export default function SchoolDetailsPage() {
         className={`w-full h-7 bg-[#FFDE59] transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
         }`}
-        style={{ transitionDelay: "200ms" }}
+        style={{ transitionDelay: "300ms" }}
       ></div>
 
       {/* ===== Main Content ===== */}
@@ -205,7 +266,14 @@ export default function SchoolDetailsPage() {
       </div>
 
       {/* ===== Student Reviews Section ===== */}
-      <ReviewSection schoolId={school.id} />
+      <div
+        className={`transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+        }`}
+        style={{ transitionDelay: "500ms" }}
+      >
+        <ReviewSection schoolId={school.id} />
+      </div>
 
       {/* ===== Nearby Schools Section ===== */}
       <div
