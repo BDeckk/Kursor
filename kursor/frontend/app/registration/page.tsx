@@ -40,9 +40,8 @@ export default function KursorProfileForm() {
 
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<string>("");
+  const [locationStatus, setLocationStatus] = useState("");
 
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
@@ -56,117 +55,66 @@ export default function KursorProfileForm() {
     longitude: "",
   });
 
+  // Check if user already exists
   useEffect(() => {
-    if (user?.email) {
-      setFormData((prev) => ({
-        ...prev,
-        email: user.email,
-      }));
-    }
-  }, [user]);
+    const checkUserExistence = async () => {
+      if (!user?.id) return;
+      try {
+        const exist = await isUserExist(user.id);
+        if (exist.success) router.replace("/dashboard");
+        else setFormData((prev) => ({ ...prev, email: user.email || "" }));
+      } catch (err) {
+        console.error("Error checking user existence:", err);
+      }
+    };
+    checkUserExistence();
+  }, [user, isUserExist, router]);
 
-  // Debounced address geocoding
-  useEffect(() => {
-    if (formData.address.trim().length > 3) {
-      const timer = setTimeout(() => {
-        getCoordinatesFromAddress(formData.address);
-      }, 800); // 800ms debounce
-      return () => clearTimeout(timer);
-    } else {
-      setLocationStatus("");
-    }
-  }, [formData.address]);
-
-  // Auto-calculate age from birthdate
+  // Calculate age
   const calculateAge = (birthdate: string): string => {
     if (!birthdate) return "";
-    
     const today = new Date();
     const birth = new Date(birthdate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
     return age.toString();
   };
 
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
-    // Auto-calculate age when birthdate changes
-    if (name === "birthdate" && value) {
-      const calculatedAge = calculateAge(value);
-      setFormData((prev) => ({ 
-        ...prev, 
-        [name]: value,
-        age: calculatedAge
-      }));
+    if (name === "birthdate") {
+      setFormData((prev) => ({ ...prev, [name]: value, age: calculateAge(value) }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    
     setSuccess("");
     setError("");
   };
 
-  // 🗺️ Try to get coordinates from address (with GPS fallback)
-  const getCoordinatesFromAddress = async (address: string) => {
-    try {
-      setLocationStatus("Detecting location...");
-      const geoRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`
-      );
-      const geoData = await geoRes.json();
-
-      if (geoData?.length > 0) {
-        const { lat, lon } = geoData[0];
-        setFormData((prev) => ({
-          ...prev,
-          latitude: lat,
-          longitude: lon,
-        }));
-        setLocationStatus("📍 Location detected from address");
-      } else {
-        console.warn("No geocode results for address:", address);
-        setLocationStatus("Address not found, trying GPS...");
-        await fallbackToGPS();
-      }
-    } catch (err) {
-      console.error("Geocode error:", err);
-      setLocationStatus("Address lookup failed, trying GPS...");
-      await fallbackToGPS();
-    }
-  };
-
-  // 🧭 Fallback to GPS if geocoding fails
-  const fallbackToGPS = async () => {
+  // Set latitude and longitude using GPS
+  const setLocation = () => {
     if (!navigator.geolocation) {
       setLocationStatus("❌ GPS not supported on this browser.");
       return;
     }
 
-    return new Promise<void>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setFormData((prev) => ({
-            ...prev,
-            latitude: latitude.toString(),
-            longitude: longitude.toString(),
-          }));
-          setLocationStatus("✅ Using GPS location");
-          resolve();
-        },
-        (err) => {
-          console.error("GPS error:", err);
-          setLocationStatus("⚠️ Could not retrieve location automatically.");
-          resolve();
-        }
-      );
-    });
+    setLocationStatus("Getting GPS location...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setFormData((prev) => ({
+          ...prev,
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+        }));
+        setLocationStatus("✅ Location set successfully.");
+      },
+      (err) => {
+        console.error("GPS error:", err);
+        setLocationStatus("⚠️ Could not retrieve GPS location. Please enter manually.");
+      }
+    );
   };
 
   const handleSubmit = async () => {
@@ -175,40 +123,38 @@ export default function KursorProfileForm() {
       return;
     }
 
+    if (
+      !formData.full_name ||
+      !formData.email ||
+      !formData.birthdate ||
+      !formData.gender ||
+      !formData.strand ||
+      !formData.age ||
+      !formData.address ||
+      !formData.latitude ||
+      !formData.longitude
+    ) {
+      setError("Please fill in all required fields, including address, latitude, and longitude.");
+      return;
+    }
+
+    const age = parseInt(formData.age);
+    if (age < 13) {
+      setError("You must be at least 13 years old to register.");
+      return;
+    }
+
     setIsSubmitting(true);
-
     try {
-      const use_result = await isUserExist(user?.id);
+      const use_result = await isUserExist(user.id);
       if (use_result.success) {
-        setError("You already have a profile. You cannot submit again.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (
-        !formData.full_name ||
-        !formData.email ||
-        !formData.birthdate ||
-        !formData.gender ||
-        !formData.address ||
-        !formData.age ||
-        !formData.strand
-      ) {
-        setError("Please fill in all required fields.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Validate minimum age (13 years old)
-      const age = parseInt(formData.age);
-      if (age < 13) {
-        setError("You must be at least 13 years old to register.");
-        setIsSubmitting(false);
+        setError("You already have a profile. Redirecting...");
+        setTimeout(() => router.replace("/dashboard"), 1500);
         return;
       }
 
       const userData = {
-        id: user?.id,
+        id: user.id,
         email: formData.email,
         full_name: formData.full_name,
         location: formData.address,
@@ -216,27 +162,14 @@ export default function KursorProfileForm() {
         age: formData.age,
         strand: formData.strand,
         birthdate: formData.birthdate,
-        latitude: parseFloat(formData.latitude) || null,
-        longitude: parseFloat(formData.longitude) || null,
+        latitude: parseFloat(formData.latitude),
+        longitude: parseFloat(formData.longitude),
         profile_image_url: null,
       };
 
       const result = await insertUser(userData);
-
       if (result.success) {
         setSuccess("User profile created successfully!");
-        setError("");
-        setFormData({
-          full_name: "",
-          email: user.email || "",
-          birthdate: "",
-          gender: "",
-          address: "",
-          strand: "",
-          age: "",
-          latitude: "",
-          longitude: "",
-        });
         router.push("/dashboard");
       } else {
         setError("Error creating profile. Please try again.");
@@ -249,15 +182,9 @@ export default function KursorProfileForm() {
     }
   };
 
-  // Calculate max date for birthdate (today)
-  const getMaxDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  };
-
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Left Side (image) */}
+      {/* Left */}
       <div className="w-[55%] flex flex-col">
         <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
           <div className="flex items-center pl-7">
@@ -265,158 +192,69 @@ export default function KursorProfileForm() {
           </div>
         </header>
         <div className="flex-1 flex items-center">
-          <img
-            src="/registration-career.png"
-            alt="Registration illustration"
-            className="w-full max-w-[780px] h-auto object-contain -mt-20"
-          />
+          <img src="/registration-career.png" alt="Registration illustration" className="w-full max-w-[780px] h-auto object-contain -mt-20" />
         </div>
       </div>
 
-      {/* Right Side (Form) */}
+      {/* Right Form */}
       <div className="w-[45%] flex items-center justify-center">
-        <div className="w-[600px] max-w-[600px] pt-30">
-          <div className="space-y-5">
-            {/* Full Name */}
-            <InputField 
-              label="Full Name *" 
-              name="full_name" 
-              value={formData.full_name} 
-              onChange={handleChange} 
-            />
-
-            {/* Email (readonly) */}
-            <div className="relative pb-4">
-              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
-                Email Address *
-              </label>
-              <div 
-                className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-[#FFFFFF] text-gray-500 cursor-not-allowed"
-                aria-label="Email Address (read-only)"
-              >
-                {user?.email}
-              </div>
-              <p className="text-xs text-gray-400 mt-1 pl-100">
-                Email is auto-filled from your account
-              </p>
-            </div>
-
-            {/* Birthdate */}
-            <InputField 
-              label="Birthdate *" 
-              type="date" 
-              name="birthdate" 
-              value={formData.birthdate} 
-              onChange={handleChange}
-            />
-
-            {/* Age (auto-calculated, readonly) */}
-            <div className="relative pb-4">
-              <label className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium">
-                Age *
-              </label>
-              <div 
-                className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600"
-                aria-label="Age (auto-calculated)"
-              >
-                {formData.age || "Select birthdate to calculate"}
-              </div>
-              <p className="text-xs text-gray-400 mt-1 pl-2">
-                Age is automatically calculated from birthdate
-              </p>
-            </div>
-
-            {/* Gender */}
-            <SelectField 
-              label="Gender *" 
-              name="gender" 
-              value={formData.gender} 
-              onChange={handleChange} 
-              options={["male", "female", "other", "prefer-not-to-say"]} 
-            />
-
-            {/* Strand */}
-            <SelectField 
-              label="Strand *" 
-              name="strand" 
-              value={formData.strand} 
-              onChange={handleChange} 
-              options={["TVL", "STEM", "ABM", "HUMS", "GAS", "ICT", "GA"]} 
-            />
-
-            {/* Address */}
-            <InputField 
-              label="Address *" 
-              name="address" 
-              value={formData.address} 
-              onChange={handleChange} 
-              placeholder="Enter your address" 
-            />
-            {locationStatus && (
-              <p className="text-sm text-gray-600 font-fredoka pl-2">{locationStatus}</p>
-            )}
-
-            {/* Show coordinates for transparency */}
-            {formData.latitude && formData.longitude && (
-              <p className="text-xs text-gray-500 font-fredoka pl-2">
-                Lat: {formData.latitude}, Lng: {formData.longitude}
-              </p>
-            )}
-
-            {/* Submit Button */}
-            <div className="pt-4 flex justify-center">
-              <button
-                onClick={handleSubmit}
-                disabled={uploading || isSubmitting}
-                className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-semibold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-base"
-                aria-label="Submit profile form"
-              >
-                {isSubmitting ? "Submitting..." : "Submit"}
-              </button>
-            </div>
-
-            {success && (
-              <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4" role="alert">
-                <p className="text-green-700 text-center font-semibold">{success}</p>
-              </div>
-            )}
-            {error && (
-              <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4" role="alert">
-                <p className="text-red-700 text-center font-semibold">{error}</p>
-              </div>
-            )}
+        <div className="w-[600px] max-w-[600px] pt-30 space-y-5">
+          <InputField label="Full Name *" name="full_name" value={formData.full_name} onChange={handleChange} />
+          <div className="relative pb-4">
+            <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">Email Address *</label>
+            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600 cursor-not-allowed">{user?.email}</div>
           </div>
+          <InputField label="Birthdate *" type="date" name="birthdate" value={formData.birthdate} onChange={handleChange} />
+          <div className="relative pb-4">
+            <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">Age *</label>
+            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600">{formData.age || "Select birthdate to calculate"}</div>
+          </div>
+          <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
+          <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL","STEM","ABM","HUMSS","GAS","ICT","GA"]} />
+
+          {/* Address */}
+          <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
+
+          {/* Latitude / Longitude side by side with button */}
+          <div className="flex items-center space-x-2">
+            <InputField label="Latitude *" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="Latitude" />
+            <InputField label="Longitude *" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="Longitude" />
+            <button onClick={setLocation} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Set Location</button>
+          </div>
+          {locationStatus && <p className="text-sm text-gray-600">{locationStatus}</p>}
+
+          <div className="pt-4 flex justify-center">
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="w-[200px] mb-20 bg-yellow-400 hover:bg-yellow-500 text-black text-[20px] font-fredoka font-semibold py-3.5 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? "Submitting..." : "Submit"}
+            </button>
+          </div>
+
+          {success && <div className="bg-green-50 border-2 border-green-400 rounded-lg p-4 text-center text-green-700 font-semibold">{success}</div>}
+          {error && <div className="bg-red-50 border-2 border-red-400 rounded-lg p-4 text-center text-red-700 font-semibold">{error}</div>}
         </div>
       </div>
     </div>
   );
 }
 
-// 🧩 Reusable small components for cleanliness
-function InputField({ label, name, value, onChange, type = "text", placeholder = "" }: InputFieldProps) {
+function InputField({ label, name, value, onChange, type="text", placeholder="" }: InputFieldProps) {
   const isRequired = label.includes('*');
-  const cleanLabel = label.replace('*', '').trim();
-  
   return (
-    <div className="relative pb-4">
-      <label 
-        className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium"
-        htmlFor={name}
-      >
-        {label}
-      </label>
+    <div className="relative pb-4 flex-1">
+      <label className="absolute -top-3 left-3 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">{label}</label>
       <input
-        id={name}
         type={type}
         name={name}
         value={value}
         onChange={onChange}
         required={isRequired}
-        aria-label={cleanLabel}
-        aria-required={isRequired}
-        max={type === "date" ? new Date().toISOString().split('T')[0] : undefined}
-        className="w-full px-6 py-3 border-2 font-fredoka border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-transparent"
+        max={type==="date"?new Date().toISOString().split('T')[0]:undefined}
         placeholder={placeholder}
+        className="w-full px-4 py-3 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-transparent"
       />
     </div>
   );
@@ -424,32 +262,18 @@ function InputField({ label, name, value, onChange, type = "text", placeholder =
 
 function SelectField({ label, name, value, onChange, options }: SelectFieldProps) {
   const isRequired = label.includes('*');
-  const cleanLabel = label.replace('*', '').trim();
-  
   return (
     <div className="relative pb-4">
-      <label 
-        className="absolute -top-3 left-6 bg-[#FFFFFF] px-2 text-gray-500 text-md font-fredoka font-medium"
-        htmlFor={name}
-      >
-        {label}
-      </label>
+      <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">{label}</label>
       <select
-        id={name}
         name={name}
         value={value}
         onChange={onChange}
         required={isRequired}
-        aria-label={cleanLabel}
-        aria-required={isRequired}
         className="w-full px-6 py-3 pr-10 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer appearance-none"
       >
         <option value="">Select option</option>
-        {options.map((opt: string) => (
-          <option key={opt} value={opt}>
-            {opt.toUpperCase()}
-          </option>
-        ))}
+        {options.map(opt => <option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
       </select>
     </div>
   );

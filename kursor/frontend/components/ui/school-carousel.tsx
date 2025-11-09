@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-
 interface School {
+  id?: number | string; // Optional unique ID for routing
   rank: number;
   schoolname: string;
   image: string;
@@ -17,13 +17,14 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
   const router = useRouter();
   const [currentSet, setCurrentSet] = useState(0);
 
-  const allSchools = school_card.map(school => ({
+  const allSchools = school_card.map((school) => ({
+    id: school.id,
     rank: school.rank,
     name: school.schoolname,
-    logo: school.image
+    logo: school.image,
   }));
 
-  const setsOfThree = [];
+  const setsOfThree: Array<typeof allSchools> = [];
   for (let i = 0; i < allSchools.length; i += 3) {
     setsOfThree.push(allSchools.slice(i, i + 3));
   }
@@ -31,31 +32,31 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
   const currentSchools = setsOfThree[currentSet] || [];
 
   const nextSet = () => {
+    if (setsOfThree.length === 0) return;
     setCurrentSet((prev) => (prev + 1) % setsOfThree.length);
   };
 
   const prevSet = () => {
+    if (setsOfThree.length === 0) return;
     setCurrentSet((prev) => (prev - 1 + setsOfThree.length) % setsOfThree.length);
   };
 
   const getCardHeight = (index: number) => {
-    if (currentSchools.length === 1) return 'h-48';
+    if (currentSchools.length === 1) return "h-48";
     if (currentSchools.length === 2) {
-      return index === 0 ? 'h-48' : 'h-40';
+      return index === 0 ? "h-48" : "h-40";
     }
-    // For 3 schools: center is tallest, sides are shorter
-    if (index === 1) return 'h-48'; // Center (should be rank 1)
-    return 'h-40'; // Sides
+    if (index === 1) return "h-48"; // center tallest
+    return "h-40"; // sides
   };
 
   const getRankTextSize = (rank: number) => {
-    return rank === 1 ? 'text-9xl' : 'text-8xl';
+    return rank === 1 ? "text-9xl" : "text-8xl";
   };
 
   const getCardOrder = () => {
     if (currentSchools.length <= 2) return currentSchools;
-    // Rearrange to put rank 1 in center, rank 2 on left, rank 3 on right
-    const sorted = [...currentSchools].sort((a, b) => a.rank - b.rank);
+    const sorted = [...currentSchools].sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
     if (sorted.length >= 3) {
       return [sorted[1], sorted[0], sorted[2]]; // rank 2, rank 1, rank 3
     }
@@ -87,10 +88,12 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
         {/* Podium Layout */}
         <div className="flex justify-center items-end gap-5 px-16 pt-5">
           {getCardOrder().map((school, index: number) => (
-            <div key={`school-${school.rank}-${currentSet}`} className="flex flex-col items-center cursor-pointer transition-transform duration-300 hover:scale-110" 
-            onClick={() => router.push(`/school?name=${encodeURIComponent(school.name)}`)}
+            <div
+              key={`school-${school.rank}-${currentSet}`}
+              className="flex flex-col items-center cursor-pointer transition-transform duration-300 hover:scale-110"
+              onClick={() => router.push(`/school-details/${school.id}`)}
             >
-              {/* School Logo - Outside and above the card */}
+              {/* School Logo */}
               <div className="w-48 h-48 mb-4 flex items-center justify-center">
                 <img
                   src={school.logo}
@@ -99,17 +102,18 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
                 />
               </div>
 
-              {/* School Name - Outside and above the card */}
+              {/* School Name */}
               <h3 className="text-base font-semibold text-gray-800 mb-6 leading-tight text-center px-2">
                 {school.name}
               </h3>
 
-              {/* The Card with just the rank */}
+              {/* The Card with the rank */}
               <div
-                className={`bg-white flex flex-col items-center justify-center text-center w-76 transform transition-all duration-300 shadow-lg rounded-t-3xl border-2 border-gray-100 ${getCardHeight(index)}`}
+                className={`bg-white flex flex-col items-center justify-center text-center w-76 transform transition-all duration-300 shadow-lg rounded-t-3xl border-2 border-gray-100 ${getCardHeight(
+                  index
+                )}`}
               >
-
-                <div className="">
+                <div>
                   <span className={`font-bold text-yellow-400 ${getRankTextSize(school.rank)}`}>
                     {school.rank}
                   </span>
@@ -122,12 +126,12 @@ const SchoolCarousel: React.FC<SchoolCarouselProps> = ({ school_card }) => {
         {/* Dots Indicator */}
         {setsOfThree.length > 1 && (
           <div className="flex justify-center mt-8 gap-2">
-            {setsOfThree.map((_: any, index: number) => (
+            {setsOfThree.map((_, index: number) => (
               <button
                 key={`dot-${index}`}
                 onClick={() => setCurrentSet(index)}
                 className={`w-3 h-3 rounded-full transition-colors ${
-                  index === currentSet ? 'bg-yellow-500' : 'bg-gray-300'
+                  index === currentSet ? "bg-yellow-500" : "bg-gray-300"
                 }`}
               />
             ))}

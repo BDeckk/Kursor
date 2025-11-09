@@ -2,27 +2,48 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function SignupModal({
   onClose,
 }: {
   onClose: () => void;
 }) {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false);
 
+  // Check if user is already logged in
   useEffect(() => {
-    // Trigger animation after component mounts
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setAlreadyLoggedIn(true);
+
+        setTimeout(() => {
+          router.replace("/dashboard");
+        }, 1200);
+      }
+    };
+
+    checkSession();
+  }, [router]);
+
+  // Animation mount
+  useEffect(() => {
     setTimeout(() => setIsVisible(true), 50);
   }, []);
 
   const handleClose = () => {
+    if (alreadyLoggedIn) return; // prevent closing during redirect
     setIsVisible(false);
-    setTimeout(onClose, 300); // Wait for animation to complete
+    setTimeout(onClose, 300);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,26 +53,7 @@ export default function SignupModal({
     setLoading(true);
 
     try {
-      // First, check if user already exists
-      const { data: existingUser } = await supabase.auth.signInWithPassword({
-        email,
-        password: "dummy-check", // Use a dummy password just to check
-      });
-
-      // If we get here without error, check for actual user existence
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (userData) {
-        setError("This email is already registered. Please log in instead.");
-        setLoading(false);
-        return;
-      }
-
-      // Proceed with signup
+      // Attempt signup (Supabase will auto-check if email exists)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -61,8 +63,10 @@ export default function SignupModal({
       });
 
       if (error) {
-        if (error.message.includes("User already registered") || 
-            error.message.includes("already exists")) {
+        if (
+          error.message.includes("User already registered") ||
+          error.message.includes("already exists")
+        ) {
           setError("This email is already registered. Please log in instead.");
         } else {
           setError(error.message);
@@ -70,8 +74,8 @@ export default function SignupModal({
         return;
       }
 
-      // Check if user was actually created or already existed
-      if (data?.user && !data.user.identities?.length) {
+      // Supabase returns user.identities = [] if email is already used
+      if (data?.user && data.user.identities?.length === 0) {
         setError("This email is already registered. Please log in instead.");
         return;
       }
@@ -87,128 +91,170 @@ export default function SignupModal({
   };
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 bg-black/50 flex items-center justify-center z-50 transition-opacity duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
+        isVisible ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose}
     >
-      <div 
-        className={`bg-white rounded-3xl shadow-2xl p-10 w-[440px] relative transition-all duration-300 ease-out ${
-          isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-4'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button */}
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
-          onClick={handleClose}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            Create <span style={{ color: '#FFDE59' }}>Account</span>
+      {/* Fullscreen "already logged in" overlay */}
+      {alreadyLoggedIn && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-10 text-center z-50">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+            You're already logged in
           </h2>
-          <p className="text-gray-500 text-sm">Join us and start your journey today</p>
+          <p className="text-gray-600">Redirecting to your dashboard...</p>
+
+          <div className="mt-6">
+            <svg
+              className="animate-spin h-7 w-7 text-[#FFDE59]"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          </div>
         </div>
+      )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Success Message */}
-        {message && (
-          <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-600 text-sm">{message}</p>
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-5">
-          {/* Email Input */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full text-gray-800 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59] focus:outline-none transition-colors duration-200"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Password Input */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="Create a password"
-              className="w-full text-gray-800 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59] focus:outline-none transition-colors duration-200"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
-          </div>
-
-          {/* Submit Button */}
+      {/* Actual signup modal (hidden while redirecting) */}
+      {!alreadyLoggedIn && (
+        <div
+          className={`bg-white rounded-3xl shadow-2xl p-10 w-[440px] relative transition-all duration-300 ease-out ${
+            isVisible
+              ? "opacity-100 scale-100 translate-y-0"
+              : "opacity-0 scale-95 -translate-y-4"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close Button */}
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold text-gray-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-[1.02] mt-2"
-            style={{ backgroundColor: '#FFDE59' }}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+            onClick={handleClose}
           >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-gray-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Signing up...
-              </span>
-            ) : (
-              "Sign Up"
-            )}
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </button>
-        </form>
 
-        {/* Terms and Privacy */}
-        <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            By signing up, you agree to our{" "}
-            <a href="#" className="hover:underline" style={{ color: '#FFDE59' }}>
-              Terms
-            </a>{" "}
-            and{" "}
-            <a href="#" className="hover:underline" style={{ color: '#FFDE59' }}>
-              Privacy Policy
-            </a>
-          </p>
-        </div>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              Create <span style={{ color: "#FFDE59" }}>Account</span>
+            </h2>
+            <p className="text-gray-500 text-sm">
+              Join us and start your journey today
+            </p>
+          </div>
 
-        {/* Login Link */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            Already have an account?{" "}
-            <a href="#" className="font-semibold hover:underline" style={{ color: '#FFDE59' }}>
-              Log in
-            </a>
-          </p>
+          {/* Error */}
+          {error && (
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Success */}
+          {message && (
+            <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-600 text-sm">{message}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="w-full text-gray-800 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59] focus:outline-none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="Create a password"
+                className="w-full text-gray-800 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59] focus:outline-none"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Must be at least 6 characters
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl font-semibold text-gray-800 transition-all duration-300 disabled:opacity-50 shadow-md hover:shadow-lg transform hover:scale-[1.02] mt-2"
+              style={{ backgroundColor: "#FFDE59" }}
+            >
+              {loading ? "Signing up..." : "Sign Up"}
+            </button>
+          </form>
+
+          {/* Terms */}
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-500">
+              By signing up, you agree to our{" "}
+              <a className="hover:underline" style={{ color: "#FFDE59" }}>
+                Terms
+              </a>{" "}
+              and{" "}
+              <a className="hover:underline" style={{ color: "#FFDE59" }}>
+                Privacy Policy
+              </a>
+            </p>
+          </div>
+
+          {/* Login Link */}
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              Already have an account?{" "}
+              <a
+                className="font-semibold hover:underline"
+                style={{ color: "#FFDE59" }}
+              >
+                Log in
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

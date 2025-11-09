@@ -1,256 +1,210 @@
 "use client";
 
-import React, {useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/homepage-navbar";
 import { useRouter } from "next/navigation";
 import HomeCards from "@/components/ui/home_carousel";
 import { MiniCarousel } from "@/components/ui/mini-carousel";
 import { SchoolCarousel } from "@/components/ui/school-carousel";
-
+import { supabase } from "@/supabaseClient";
 
 export default function DashboardPage() {
-
-  const router = useRouter(); 
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
 
+  const [topStatistics, setTopStatistics] = useState<any[]>([]);
+  const [topReviews, setTopReviews] = useState<any[]>([]);
+
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Trigger animation after component mounts
-    setTimeout(() => setIsVisible(true), 100);
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
-   //Temporary! Carousel slides content - need some adjustments, can insert the contents here : kanang first carousel
+  /* ----------------- Fetch Top Statistics ----------------- */
+  useEffect(() => {
+    const fetchTopStatistics = async () => {
+      setStatsLoading(true);
+      setStatsError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from("top_universities")
+          .select("*")
+          .order("rank", { ascending: true })
+          .limit(10);
+
+        if (error) throw error;
+
+        const formatted = data.map((u) => ({
+          id: u.university_id,
+          rank: u.rank,
+          schoolname: u.schoolname,
+          image: u.image ?? "/temporary-school-logo/placeholder.png",
+        }));
+
+        setTopStatistics(formatted);
+      } catch (err: any) {
+        setStatsError(err.message ?? "Failed to load data");
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchTopStatistics();
+  }, []);
+
+  /* ----------------- Fetch Top Reviews ----------------- */
+  useEffect(() => {
+    const fetchTopReviews = async () => {
+      setReviewsLoading(true);
+      setReviewsError(null);
+
+      try {
+        const { data: reviewRows, error: reviewErr } = await supabase
+          .from("reviews")
+          .select("school_id, rating");
+
+        if (reviewErr) throw reviewErr;
+
+        if (!reviewRows || reviewRows.length === 0) {
+          setTopReviews([]);
+          return;
+        }
+
+        // Compute average rating per school_id
+        const ratingMap: Record<string, { total: number; count: number }> = {};
+        reviewRows.forEach((row) => {
+          const id = row.school_id;
+          if (!id) return;
+          if (!ratingMap[id]) ratingMap[id] = { total: 0, count: 0 };
+          ratingMap[id].total += row.rating;
+          ratingMap[id].count += 1;
+        });
+
+        const averages = Object.entries(ratingMap).map(([schoolId, stats]) => ({
+          school_id: schoolId,
+          average: stats.total / stats.count,
+        }));
+
+        // Sort descending by average rating
+        averages.sort((a, b) => b.average - a.average);
+
+        // Take top 10
+        const top10 = averages.slice(0, 10);
+        if (top10.length === 0) {
+          setTopReviews([]);
+          return;
+        }
+
+        // Fetch school metadata
+        const schoolIds = top10.map((s) => s.school_id);
+        const { data: schoolRows, error: schoolErr } = await supabase
+          .from("schools")
+          .select("id, name, school_logo")
+          .in("id", schoolIds);
+
+        if (schoolErr) throw schoolErr;
+
+        // Merge results
+        const merged = top10.map((entry, index) => {
+          const school = schoolRows.find((s) => s.id === entry.school_id);
+          return {
+            id: school?.id,
+            rank: index + 1,
+            schoolname: school?.name ?? "Unknown School",
+            image: school?.school_logo ?? "/temporary-school-logo/placeholder.png",
+            rating: entry.average,
+          };
+        });
+
+        setTopReviews(merged);
+      } catch (err: any) {
+        setReviewsError(err.message ?? "Failed to load reviews");
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchTopReviews();
+  }, []);
+
+  /* ------------------- STATIC CONTENT ------------------- */
   const slides = [
-    {
-      image: "/homepage_carousel/carousel3.png"
-    },
-    {
-      image: "/homepage_carousel/carousel2.png"
-    }
+    { image: "/homepage_carousel/carousel3.png" },
+    { image: "/homepage_carousel/carousel2.png" },
   ];
 
-  //Temporary! Coursel slides content, second carousel "Fields that might interest you"
   const fields = [
-    { 
-      title: "Engineering & Technology", 
-      image: "/homepage_carousel/engineer.svg",
-      description: "Build the future with innovation",
-      color: "bg-blue-50",
-      imageWidth: "250px",  
-      imageHeight: "250px",  
-      imageTop: "4px"
-    },
-    { 
-      title: "Arts, Humanities & Design", 
-      image: "/homepage_carousel/artist.svg",
-      description: "Express creativity and culture",
-      color: "bg-purple-50",
-      imageWidth: "230px",  
-      imageHeight: "230px",
-      imageTop: "7px",
-      imageLeft: "0px"
-    },
-    { 
-      title: "Business & Management", 
-      image: "/homepage_carousel/finance.svg",
-      description: "Lead and drive growth",
-      color: "bg-green-50",
-      imageWidth: "250px",  // Medium
-      imageHeight: "250px",
-      imageTop: "6px",
-      imageLeft: "3px"
-    },
-    { 
-      title: "Law & Legal Studies", 
-      image: "/homepage_carousel/judge.svg",
-      description: "Advocate for justice",
-      color: "bg-red-50",
-      imageWidth: "250px",  // Largest
-      imageHeight: "250px",
-      imageTop: "8px"
-    },
-    { 
-      title: "Health & Medical Sciences", 
-      image: "/homepage_carousel/doctor.svg",
-      description: "Care for others' wellbeing",
-      color: "bg-teal-50",
-      imageWidth: "230px",  // Default
-      imageHeight: "230px",
-      imageTop: "22px"
-    },
-    { 
-      title: "Education & Social Work", 
-      image: "/homepage_carousel/Teacher.png",
-      description: "Shape minds and communities",
-      color: "bg-orange-50",
-      imageWidth: "240px",  
-      imageHeight: "240px",
-      imageTop: "16px"
-    }
+    { title: "Engineering & Technology", image: "/homepage_carousel/engineer.svg", description: "Build the future with innovation", color: "bg-blue-50", imageWidth: "250px", imageHeight: "250px", imageTop: "4px" },
+    { title: "Arts, Humanities & Design", image: "/homepage_carousel/artist.svg", description: "Express creativity and culture", color: "bg-purple-50", imageWidth: "230px", imageHeight: "230px", imageTop: "7px", imageLeft: "0px" },
+    { title: "Business & Management", image: "/homepage_carousel/finance.svg", description: "Lead and drive growth", color: "bg-green-50", imageWidth: "250px", imageHeight: "250px", imageTop: "6px", imageLeft: "3px" },
+    { title: "Law & Legal Studies", image: "/homepage_carousel/judge.svg", description: "Advocate for justice", color: "bg-red-50", imageWidth: "250px", imageHeight: "250px", imageTop: "8px" },
+    { title: "Health & Medical Sciences", image: "/homepage_carousel/doctor.svg", description: "Care for others' wellbeing", color: "bg-teal-50", imageWidth: "230px", imageHeight: "230px", imageTop: "22px" },
+    { title: "Education & Social Work", image: "/homepage_carousel/Teacher.png", description: "Shape minds and communities", color: "bg-orange-50", imageWidth: "240px", imageHeight: "240px", imageTop: "16px" },
   ];
 
-  //Temporary! Coursel slides content, third carousel "School - mini carousel - thingy"
-  const schoolList = [
-    { rank: 1, schoolname: "Cebu Insitute of Technology - University", image: "/temporary-school-logo/CIT.png"},
-    { rank: 2, schoolname: "University of San Carlos", image: "/temporary-school-logo/USC.png"},
-    { rank: 3, schoolname: "Cebu Normal University", image: "/temporary-school-logo/USC.png"},
-    { rank: 4, schoolname: " Southwestern University PHINMA", image: "/temporary-school-logo/USC.png"},
-    { rank: 5, schoolname: "Cebu Institute of Medicine", image: "/temporary-school-logo/USC.png"},
-  ]
-  
-  const handleAiClick = () => {
-    router.push("/chatbot");
-  }
+  const handleAiClick = () => router.push("/chatbot");
+  const handleAssessmentClick = () => router.push("/assessment");
+  const handleSchoolClick = () => router.push("/school");
 
-  const handleAssessmentClick = () => {
-    router.push("/assessment");
-  }
-
-  const handleSchoolClick = () => {
-    router.push("/school");
-  }
-
+  /* ------------------- RENDER ------------------- */
   return (
     <div className="min-h-screen bg-white">
-      {/* Navbar */}
       <Navbar />
-
-      {/* Main Content */}
       <main className="pb-1">
-
-        {/* Carousel Section */}
-        <div 
-          className={`mb-9 pl-[19%] pr-[19%] pt-[7%] transition-all duration-700 ease-out ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8'
-          }`}
-        >
-         <HomeCards slides={slides}/>
+        {/* Main Carousel */}
+        <div className={`mb-9 pl-[19%] pr-[19%] pt-[7%] transition-all duration-700 ease-out ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"}`}>
+          <HomeCards slides={slides} />
         </div>
 
         {/* Feature Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pl-[15%] pr-[15%]">
-
-          {/* Seek Guidance Card */}
-          <button 
-            onClick={handleAiClick}
-            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-            style={{ transitionDelay: '200ms' }}
-          >
-              <div className="absolute w-[200px] h-[200px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 z-0"></div>
-              
-              <img 
-                src="\homepage_carousel\seek.png" 
-                alt="Seek guidance illustration"
-                className="relative z-10 w-[314px] h-[288px] object-contain transition-transform duration-300 group-hover:scale-110 -translate-y-7.5"
-              />
-            <div className="-translate-y-10 transition-transform duration-300 group-hover:scale-104">
-              <h3 className="text-[25px] font-outfit font-bold text-black mb-2">
-                Seek <span className="text-yellow-500">guidance</span>
-              </h3>
-              <p className="text-[25px] font-outfit font-bold text-black -mt-2">from our AI</p>
-              </div>
+          <button onClick={handleAiClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group">
+            <img src="/homepage_carousel/seek.png" alt="Seek guidance" className="relative z-10 w-[314px] h-[288px] object-contain" />
+            <div><h3 className="text-[25px] font-outfit font-bold text-black mb-2">Seek <span className="text-yellow-500">guidance</span></h3><p className="text-[25px] font-outfit font-bold text-black -mt-2">from our AI</p></div>
           </button>
-
-          {/* Find Perfect Career Card */}
-          <button 
-            onClick={handleAssessmentClick} 
-            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-            style={{ transitionDelay: '300ms' }}
-          >
-              <div className="absolute w-[200px] h-[200px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 top-6 z-0"></div>
-             
-              <img 
-                src="\homepage_carousel\find.png" 
-                alt="Find career illustration"
-                className="relative z-10 w-[314px] h-[288px] object-contain transition-transform duration-300 group-hover:scale-110 -translate-y-7"
-              />
-            <div className="-translate-y-10 transition-transform duration-300 group-hover:scale-104">
-              <h3 className="text-[25px] font-outfit font-bold text-black mb-2">
-                Find the <span className="text-yellow-500">perfect</span>
-              </h3>
-              <p className="text-[25px] font-outfit font-bold text-black -mt-2">career path</p>
-            </div>
+          <button onClick={handleAssessmentClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group">
+            <img src="/homepage_carousel/find.png" alt="Find career" className="relative z-10 w-[314px] h-[288px] object-contain" />
+            <div><h3 className="text-[25px] font-outfit font-bold text-black mb-2">Find the <span className="text-yellow-500">perfect</span></h3><p className="text-[25px] font-outfit font-bold text-black -mt-2">career path</p></div>
           </button>
-
-          {/* Browse Schools Card */}
-          <button 
-            onClick={handleSchoolClick} 
-            className={`bg-white rounded-2xl p-8 min-h-95 max-h-95 shadow-lg border-2 border-transparent hover:border-yellow-600 transition-all duration-700 ease-out cursor-pointer text-center relative group ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-            style={{ transitionDelay: '400ms' }}
-          >
-            <div className="absolute w-[200px] h-[208px] bg-[#FFDE59] top-11 rounded-2xl flex items-center justify-center mb-6 mx-auto overflow-hidden left-1/2 -translate-x-1/2 top-6 z-0"></div>
-
-            <img 
-              src="\homepage_carousel\browse.png" 
-              alt="Browse schools illustration"
-              className="relative z-10 w-[314px] h-[288px] object-contain transition-transform duration-300 group-hover:scale-110 -translate-y-11 -translate-x-2"
-            />
-
-            <div className = "-translate-y-10 transition-transform duration-300 group-hover:scale-104">
-              <h3 className="text-[25px] font-outfit font-bold text-black mb-2">
-                Browse for <span className="text-yellow-500">schools</span>
-              </h3>
-              <p className="text-[25px] font-outfit font-bold text-black -mt-2">near you</p>
-            </div>
+          <button onClick={handleSchoolClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group">
+            <img src="/homepage_carousel/browse.png" alt="Browse schools" className="relative z-10 w-[314px] h-[288px] object-contain" />
+            <div><h3 className="text-[25px] font-outfit font-bold text-black mb-2">Browse for <span className="text-yellow-500">schools</span></h3><p className="text-[25px] font-outfit font-bold text-black -mt-2">near you</p></div>
           </button>
-
         </div>
 
-        {/* Fields that might interest you */}
-        <div 
-          className={`w-full pt-[5%] transition-all duration-700 ease-out ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-          style={{ transitionDelay: '500ms' }}
-        >
-          {/* Yellow background section with title and carousel inside */}
+        {/* Fields Carousel */}
+        <div className="w-full pt-[5%] transition-all duration-700 ease-out">
           <div className="bg-[#FFDE59] py-12 w-full">
-            {/* Title inside yellow background */}
             <div className="px-[6%] mb-8">
-              <h2 className="text-3xl font-bold font-outfit text-gray-800">
-                Fields that might <span className="text-[#FFFFFF]">interest you</span>
-              </h2>
+              <h2 className="text-3xl font-bold font-outfit text-gray-800">Fields that might <span className="text-white">interest you</span></h2>
             </div>
-            <MiniCarousel mini_card={fields}/>
+            <MiniCarousel mini_card={fields} />
           </div>
         </div>
 
-         {/*School - mini carousel - thingy */}
-          <div 
-            className={`w-full pl-[6%] pr-[6%] pt-[2%] mt-5 transition-all duration-700 ease-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-            style={{ transitionDelay: '600ms' }}
-          >
+        {/* Top Statistics Carousel */}
+        <div className="w-full pl-[6%] pr-[6%] pt-[2%] mt-5 transition-all duration-700 ease-out">
           <div className="px-[6%] mb-8">
-              <h2 className="text-3xl font-bold font-outfit text-gray-800 text-right pl-10" >
-                Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span>
-              </h2>
-            </div>
-          <SchoolCarousel school_card={schoolList}/>
+            <h2 className="text-3xl font-bold font-outfit text-gray-800 text-right pl-10">Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span></h2>
+          </div>
+          {statsLoading ? <div className="text-center text-gray-800">Loading...</div> : statsError ? <div className="text-center text-red-600">{statsError}</div> : <SchoolCarousel school_card={topStatistics} />}
         </div>
 
-
-        {/* Top Rated Schools Based on Student Reviews */}
-          <div 
-            className={`w-full pt-[3%] bg-[#FFDE59] py-12 w-full mt-20 pb-[2%] transition-all duration-700 ease-out ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-            style={{ transitionDelay: '700ms' }}
-          >
+        {/* Top Reviews Carousel */}
+        <div className="w-full pt-[3%] bg-[#FFDE59] py-12 w-full mt-20 pb-[2%] transition-all duration-700 ease-out">
           <div className="px-[6%] mb-8">
-              <h2 className="text-3xl font-bold font-outfit text-gray-800 mb-10 pl-10">
-                Top-Rated Schools <span className="text-white">Based on Student Reviews</span>
-              </h2>
-            </div>
-          <SchoolCarousel school_card={schoolList}/>
+            <h2 className="text-3xl font-bold font-outfit text-gray-800 mb-10 pl-10">Top-Rated Schools <span className="text-white">Based on Student Reviews</span></h2>
+          </div>
+          {reviewsLoading ? <div className="text-center text-gray-800">Loading...</div> : reviewsError ? <div className="text-center text-red-600">{reviewsError}</div> : <SchoolCarousel school_card={topReviews} />}
         </div>
       </main>
     </div>
   );
-} 
+}
