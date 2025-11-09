@@ -8,6 +8,7 @@ import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import ProgramImage from "@/components/programs_image/left_image";
 import MainImage from "@/components/programs_image/main_image";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
+import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 
 interface Program {
   id?: string;
@@ -20,64 +21,99 @@ interface Program {
 export default function ProgramDetailsPage() {
   const [program, setProgram] = useState<Program | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const { nearbySchools, loading, error: locationError } = useNearbySchools();
+  const [pageReady, setPageReady] = useState(false);
+  
+  const { nearbySchools, loading: nearbyLoading, error: locationError } = useNearbySchools();
+  const { setIsLoading } = useGlobalLoading();
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const programId = searchParams.get("id");
 
-  // Animate section visibility
-  useEffect(() => {
-    setTimeout(() => setIsVisible(true), 100);
-  }, []);
-
   // Fetch program data from Supabase
   useEffect(() => {
-    if (programId) {
-      fetchProgramFromDatabase(programId);
-    } else {
+    if (!programId) {
       setError("No program ID provided");
+      setLoading(false);
+      return;
     }
+
+    const fetchProgramFromDatabase = async () => {
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from("programs")
+          .select("*")
+          .eq("id", programId)
+          .single();
+
+        if (fetchError) throw new Error(fetchError.message);
+        setProgram(data);
+      } catch (err) {
+        console.error("Error fetching program:", err);
+        setError((err as Error).message || "Failed to load program");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProgramFromDatabase();
   }, [programId]);
 
-  async function fetchProgramFromDatabase(id: string) {
-    try {
-      const { data, error } = await supabase
-        .from("programs")
-        .select("*")
-        .eq("id", id)
-        .single();
+  // Wait for all data to be ready before showing page
+  useEffect(() => {
+    const dataReady = !loading && program !== null;
 
-      if (error) throw error;
-      setProgram(data);
-    } catch (err) {
-      console.error("Error fetching program:", err);
-      setError("Failed to load program");
+    if (loading || nearbyLoading || !dataReady) {
+      setIsLoading(true);
+    } else {
+      const t = setTimeout(() => {
+        setPageReady(true);
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 50);
+      }, 500);
+      return () => clearTimeout(t);
     }
+  }, [loading, nearbyLoading, program, setIsLoading]);
+
+  // Don't show content until everything is ready
+  if (!pageReady) {
+    return null;
   }
 
   // Error state
-  if (error && !program) {
+  if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-7xl mx-auto pt-[9%] px-4 pb-12">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-            <h2 className="text-2xl font-semibold text-red-900 mb-2">Error</h2>
-            <p className="text-red-700">{error}</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Error Loading Program</h2>
+          <p>{error}</p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-6 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
   }
 
-  // Loading state
   if (!program) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Program Not Found</h2>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-6 py-2 bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition"
+          >
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -91,48 +127,53 @@ export default function ProgramDetailsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Navbar />
+      {/* Navbar with fade-in */}
+      <div
+        className={`transition-opacity duration-500 ${
+          isVisible ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        <Navbar />
+      </div>
+
+      {/* ===== Hero Banner Section ===== */}
       <div 
         className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
         }`}
+        style={{ transitionDelay: "200ms" }}
       >
-        
-      {/* Back Button */}
-      <div className="fixed top-24 left-3 z-1">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 px-4 py-2 bg-transparent transition-all duration-200"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        {/* Back Button */}
+        <div className="fixed top-24 left-3 z-10">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 px-4 py-2 bg-transparent transition-all duration-200"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-        </button>
-      </div>
-      
-      {/* Top Banner - Image with Yellow Overlay and Title */}
-      
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </button>
+        </div>
+        
+        {/* Top Banner */}
         <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
-          {/* Background Image Container */}
           <div className="relative w-full overflow-hidden">
             <MainImage programData={program} />
           </div>
           
-          {/* Yellow Overlay Gradient (left side) - positioned absolutely over image */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#FFDE59] via-[#FFDE59]/80 to-transparent pointer-events-none"></div>
           
-          {/* Program Title on Left - positioned absolutely over overlay */}
           <div className="absolute inset-0 flex items-center">
             <div className="max-w-7xl mx-auto w-full px-7">
               <h1 className="text-4xl md:text-5xl font-outfit font-bold text-gray-900 leading-tight max-w-md">
@@ -143,28 +184,28 @@ export default function ProgramDetailsPage() {
         </div>
       </div>
 
-      {/* Yellow Stripe Below Banner */}
+      {/* ===== Yellow Stripe ===== */}
       <div 
-        className={`w-full h-10 bg-[#FFDE59] transition-all duration-700 ease-out ${
+        className={`w-full h-7 bg-[#FFDE59] transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
         }`}
-        style={{ transitionDelay: "200ms" }}
+        style={{ transitionDelay: "300ms" }}
       ></div>
 
-      {/* Main Content Grid */}
+      {/* ===== Main Content ===== */}
       <div 
-        className={`grid grid-cols-1 lg:grid-cols-2 items-center transition-all duration-700 ease-out ${
+        className={`grid grid-cols-1 lg:grid-cols-2 items-center gap-5 px-8 md:px-30 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
         style={{ transitionDelay: "400ms" }}
       >
-        {/* Left Side - Image */}
+        {/* Left: Image */}
         <div className="flex justify-center">
           <ProgramImage title={program.title} />
         </div>
 
-        {/* Right Side - Content */}
-        <div className="flex flex-col justify-start w-[70%] space-y-6">
+        {/* Right: Info */}
+        <div className="flex flex-col justify-start w-[80%] space-y-6">
           <div>
             <h2 className="text-3xl font-outfit font-bold mb-2 text-gray-900 leading-tight">
               {program.title}
@@ -201,7 +242,7 @@ export default function ProgramDetailsPage() {
         </div>
       </div>
 
-      {/* Nearby Schools Section */}
+      {/* ===== Nearby Schools Section ===== */}
       <div
         className={`w-full bg-[#FFDE59] py-10 px-15 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -213,15 +254,25 @@ export default function ProgramDetailsPage() {
             Top Performing <span className="text-white">Universities in this Field</span>
           </h2>
         </div>
-        {loading ? (
-            <div className="text-center text-gray-800 font-fredoka">Finding nearby schools...</div>
-          ) : locationError ? (
-            <div className="text-center text-red-600 font-fredoka">{locationError}</div>
-          ) : nearbySchools.length > 0 ? (
+
+        {nearbyLoading ? (
+          <p className="text-center text-gray-800 font-fredoka">
+            Finding nearby schools...
+          </p>
+        ) : locationError ? (
+          <p className="text-center text-red-600 font-fredoka">
+            {locationError}
+          </p>
+        ) : nearbySchools.length > 0 ? (
+          <div className="max-w-[1300px] mx-auto">
             <NearbySchoolCarousel school_card={nearbySchools} />
-          ) : (
-            <div className="text-center text-gray-800 font-fredoka">No nearby schools found.</div>
-          )}
+          </div>
+        ) : (
+          <p className="text-center text-gray-800 font-fredoka">
+            No nearby schools found.
+          </p>
+        )}
       </div>
     </div>
-)}
+  );
+}

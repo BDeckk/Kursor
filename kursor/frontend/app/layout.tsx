@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Fredoka } from "next/font/google";
 import { Outfit } from "next/font/google";
-import { AuthProvider } from '@/Context/AuthContext';
+import { AuthProvider } from "@/Context/AuthContext";
+import { GlobalLoadingProvider } from "@/Context/GlobalLoadingContext"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,13 +18,13 @@ const geistMono = Geist_Mono({
 
 const fredoka = Fredoka({
   subsets: ["latin"],
-  weight: ["400","500","600","700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-fredoka",
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["400","500","600","700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-outfit",
 });
 
@@ -38,14 +39,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fredoka.variable} ${outfit.variable}`} >
+    <html lang="en" className={`${fredoka.variable} ${outfit.variable}`}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <GlobalLoadingProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </GlobalLoadingProvider>
       </body>
     </html>
   );

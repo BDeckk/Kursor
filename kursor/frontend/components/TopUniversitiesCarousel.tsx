@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Star, Award, MapPin } from "lucide-react";
+import { Heart, Star, Award } from "lucide-react";
 import { supabase } from "@/supabaseClient";
 import {
   Carousel,
@@ -15,18 +15,16 @@ import {
 const SUPABASE_STORAGE_URL =
   "https://fiujlzfouidrxbechcxa.supabase.co/storage/v1/object/public";
 
-// Simplified image resolver
 function resolveImageUrl(imagePath?: string | null) {
   if (!imagePath) return null;
   const trimmed = String(imagePath).trim();
   if (!trimmed) return null;
 
-  // Keep logic to handle full URLs vs. path segments
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (trimmed.includes("/storage/v1/object/public/")) return trimmed;
 
   const segments = trimmed.split("/").filter(Boolean);
-  const encoded = segments.map(s => encodeURIComponent(s)).join("/");
+  const encoded = segments.map((s) => encodeURIComponent(s)).join("/");
   return `${SUPABASE_STORAGE_URL}/school_logos/${encoded}`;
 }
 
@@ -48,7 +46,6 @@ export function TopUniversitiesCarousel({
   const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
   const [likedUnis, setLikedUnis] = React.useState<Record<string, boolean>>({});
 
-  // --- Data Fetching and Liking Logic (Kept as is) ---
   React.useEffect(() => {
     if (!userId) return;
 
@@ -83,9 +80,12 @@ export function TopUniversitiesCarousel({
     }
 
     const isLiked = likedUnis[String(schoolId)];
-    setLikedUnis(prev => ({ ...prev, [schoolId]: !isLiked }));
+    setLikedUnis((prev) => ({ ...prev, [schoolId]: !isLiked }));
 
-    const idValue = typeof schoolId === "string" && schoolId.includes("-") ? schoolId : Number(schoolId);
+    const idValue =
+      typeof schoolId === "string" && schoolId.includes("-")
+        ? schoolId
+        : Number(schoolId);
 
     if (isLiked) {
       const { error } = await supabase
@@ -95,7 +95,7 @@ export function TopUniversitiesCarousel({
         .eq("school_id", idValue);
       if (error) {
         console.error("Failed to unlike:", error.message);
-        setLikedUnis(prev => ({ ...prev, [schoolId]: true }));
+        setLikedUnis((prev) => ({ ...prev, [schoolId]: true }));
       }
     } else {
       const { error } = await supabase
@@ -103,7 +103,7 @@ export function TopUniversitiesCarousel({
         .insert([{ user_id: userId, school_id: idValue }]);
       if (error) {
         console.error("Failed to like:", error.message);
-        setLikedUnis(prev => ({ ...prev, [schoolId]: false }));
+        setLikedUnis((prev) => ({ ...prev, [schoolId]: false }));
       }
     }
   };
@@ -112,11 +112,9 @@ export function TopUniversitiesCarousel({
     router.push(`/school-details/${id}`);
   };
 
-  // --- Simplified UI Rendering ---
-
   return (
     <Carousel className="w-full relative overflow-visible">
-      <CarouselContent className="gap-4 px-12">
+      <CarouselContent className="gap-2 px-12">
         {universities.map((uni, index) => {
           const imageUrl = resolveImageUrl(uni.image);
           const idKey = String(uni.id);
@@ -130,12 +128,11 @@ export function TopUniversitiesCarousel({
             >
               <div
                 onClick={() => handleCardClick(uni.id)}
-                className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col items-center text-center h-full relative hover:shadow-xl transition-shadow"
+                className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col justify-between text-center h-[380px] relative hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
-                
                 {/* Like Button */}
                 <button
-                  onClick={e => {
+                  onClick={(e) => {
                     e.stopPropagation();
                     toggleLike(uni.id);
                   }}
@@ -149,22 +146,22 @@ export function TopUniversitiesCarousel({
                     }`}
                   />
                 </button>
-                
+
                 {/* Rank Badge */}
                 <div className="absolute top-4 left-4 flex items-center gap-1 text-sm font-semibold text-gray-700">
-                    <Award className="w-4 h-4 text-gray-500" />
-                    <span>#{uni.rank}</span>
+                  <Award className="w-4 h-4 text-gray-500" />
+                  <span>#{uni.rank}</span>
                 </div>
 
                 {/* Image Section */}
-                <div className="w-32 h-32 flex items-center justify-center mb-4 mt-6">
+                <div className="w-32 h-32 flex items-center justify-center mx-auto mt-6">
                   {imageUrl && !isFailed ? (
                     <img
                       src={imageUrl}
                       alt={uni.schoolname}
                       className="w-full h-full object-contain rounded-md"
                       onError={() => {
-                        setFailedImages(prev => ({ ...prev, [idKey]: true }));
+                        setFailedImages((prev) => ({ ...prev, [idKey]: true }));
                       }}
                     />
                   ) : (
@@ -174,21 +171,22 @@ export function TopUniversitiesCarousel({
                   )}
                 </div>
 
-                {/* Content Section */}
-                <h3 className="text-base font-bold text-black mb-2 min-h-[3rem] flex items-center justify-center">
-                  {uni.schoolname}
-                </h3>
+                {/* Docked Content Section */}
+                <div className="flex flex-col justify-between flex-grow mt-4 w-full">
+                  {/* Fixed-height school name */}
+                  <h3 className="text-base font-bold text-black mb-2 h-[3.5rem] flex items-center justify-center text-center">
+                    {uni.schoolname}
+                  </h3>
 
-                <div className="w-full space-y-1">
-                  {uni.reason && (
-                    // Reason: Simple text, using a smaller font
-                    <p className="text-xs text-gray-500 line-clamp-2 mt-2">
-                      {uni.reason}
+                  {/* Fixed-height description area */}
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-500 line-clamp-3 h-[3rem]">
+                      {uni.reason || ""}
                     </p>
-                  )}
+                  </div>
 
-                  {/* Simplified Rating Section */}
-                  <div className="flex items-center justify-center pt-3 border-t border-gray-100 mt-4">
+                  {/* Rating docked at the bottom */}
+                  <div className="flex flex-col items-center justify-center border-t border-gray-100 mt-4 pt-3 pb-2">
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <Star
@@ -202,9 +200,6 @@ export function TopUniversitiesCarousel({
                       ))}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600 block mt-1">
-                      View Details →
-                  </span>
                 </div>
               </div>
             </CarouselItem>
@@ -212,9 +207,8 @@ export function TopUniversitiesCarousel({
         })}
       </CarouselContent>
 
-      {/* Simplified Carousel Navigation Buttons */}
-      <CarouselPrevious className="text-gray-800 hover:text-blue-500 -left-6" />
-      <CarouselNext className="text-gray-800 hover:text-blue-500 -right-6" />
+      <CarouselPrevious className="text-gray-800 hover:text-blue-500 -left-20" />
+      <CarouselNext className="text-gray-800 hover:text-blue-500 -right-20" />
     </Carousel>
   );
 }
