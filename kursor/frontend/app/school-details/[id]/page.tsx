@@ -18,22 +18,24 @@ interface School {
   location: string;
   institutional_email: string;
   contact_number: string;
-  critique_review?: number;
+}
+
+interface Review {
+  rating: number;
 }
 
 export default function SchoolDetailsPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
-
   const { setIsLoading } = useGlobalLoading();
 
   const [school, setSchool] = useState<School | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageReady, setPageReady] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Track image loading states
   const [logoLoaded, setLogoLoaded] = useState(false);
   const [pictureLoaded, setPictureLoaded] = useState(false);
 
@@ -54,7 +56,7 @@ export default function SchoolDetailsPage() {
           .from("schools")
           .select("*")
           .eq("id", id)
-          .single();
+          .maybeSingle();
 
         if (fetchError) throw new Error(fetchError.message);
         setSchool(data);
@@ -69,6 +71,27 @@ export default function SchoolDetailsPage() {
     fetchSchoolDetails();
   }, [id]);
 
+  // Fetch reviews
+  useEffect(() => {
+    if (!school) return;
+
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("rating")
+          .eq("school_id", school.id);
+
+        if (error) throw error;
+        setReviews(data || []);
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+      }
+    };
+
+    fetchReviews();
+  }, [school]);
+
   // Preload images
   useEffect(() => {
     if (!school) return;
@@ -77,7 +100,7 @@ export default function SchoolDetailsPage() {
     const pictureImg = new Image();
 
     logoImg.onload = () => setLogoLoaded(true);
-    logoImg.onerror = () => setLogoLoaded(true); // Still mark as loaded even on error
+    logoImg.onerror = () => setLogoLoaded(true);
 
     pictureImg.onload = () => setPictureLoaded(true);
     pictureImg.onerror = () => setPictureLoaded(true);
@@ -86,7 +109,7 @@ export default function SchoolDetailsPage() {
     pictureImg.src = school.school_picture || "/placeholder-picture.png";
   }, [school]);
 
-  // Wait for all data to be ready before showing page
+  // Wait for all data to be ready
   useEffect(() => {
     const imagesReady = school ? (logoLoaded && pictureLoaded) : false;
     const dataReady = !loading && school !== null;
@@ -103,12 +126,8 @@ export default function SchoolDetailsPage() {
     }
   }, [loading, nearbyLoading, school, logoLoaded, pictureLoaded, setIsLoading]);
 
-  // Don't show content until everything is ready
-  if (!pageReady) {
-    return null;
-  }
+  if (!pageReady) return null;
 
-  // Error States
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
@@ -142,25 +161,25 @@ export default function SchoolDetailsPage() {
     );
   }
 
+  // Calculate average rating
+  const averageRating = reviews.length
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(2)
+    : null;
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Navbar with fade-in */}
-      <div
-        className={`transition-opacity duration-500 ${
-          isVisible ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      {/* Navbar */}
+      <div className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
         <Navbar />
       </div>
 
-      {/* ===== Hero Banner Section ===== */}
+      {/* Hero Banner */}
       <div
         className={`w-full pt-[5.2%] mb-5 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
         }`}
         style={{ transitionDelay: "200ms" }}
       >
-        {/* Back Button */}
         <div className="fixed top-24 left-3 z-10">
           <button
             onClick={() => router.back()}
@@ -173,17 +192,11 @@ export default function SchoolDetailsPage() {
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
         </div>
 
-        {/* Top Banner */}
         <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
           <img
             src={school.school_picture || "/placeholder-picture.png"}
@@ -202,7 +215,7 @@ export default function SchoolDetailsPage() {
         </div>
       </div>
 
-      {/* ===== Yellow Stripe ===== */}
+      {/* Yellow Stripe */}
       <div
         className={`w-full h-7 bg-[#FFDE59] transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"
@@ -210,33 +223,27 @@ export default function SchoolDetailsPage() {
         style={{ transitionDelay: "300ms" }}
       ></div>
 
-      {/* ===== Main Content ===== */}
+      {/* Main Content */}
       <div
         className={`grid grid-cols-1 lg:grid-cols-2 items-center gap-5 px-8 md:px-30 pt-20 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
         style={{ transitionDelay: "400ms" }}
       >
-        {/* Left: Logo */}
+        {/* Logo */}
         <div className="flex justify-center">
-          <div className="flex flex-col items-center">
-            <img
-              src={school.school_logo || "/placeholder-logo.png"}
-              alt={`${school.name} logo`}
-              className="w-100 h-100 object-contain mb-4"
-            />
-          </div>
+          <img
+            src={school.school_logo || "/placeholder-logo.png"}
+            alt={`${school.name} logo`}
+            className="w-100 h-100 object-contain mb-4"
+          />
         </div>
 
-        {/* Right: Info */}
+        {/* Info */}
         <div className="flex flex-col justify-start w-[80%] space-y-6">
           <div>
-            <h2 className="text-3xl font-outfit font-bold mb-2 text-gray-900 leading-tight">
-              {school.name}
-            </h2>
-            <p className="text-lg font-fredoka text-gray-600">
-              {school.location}
-            </p>
+            <h2 className="text-3xl font-outfit font-bold mb-2 text-gray-900 leading-tight">{school.name}</h2>
+            <p className="text-lg font-fredoka text-gray-600">{school.location}</p>
           </div>
 
           <div className="text-gray-700 text-base leading-relaxed space-y-2">
@@ -246,18 +253,20 @@ export default function SchoolDetailsPage() {
             <p>
               <strong>Contact:</strong> {school.contact_number}
             </p>
-            <p className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <strong>Critique Review:</strong>
-              <span className="text-gray-800 font-fredoka">
-                {school.critique_review ?? "⭐ 4.78"}
-              </span>
-            </p>
+              {averageRating ? (
+                <span className="flex items-center gap-1 text-gray-800 font-fredoka">
+                  <span><img src='/star-filled.png' className="w-auto h-6"/></span> {averageRating}
+                </span>
+              ) : (
+                <span className="text-gray-800 font-fredoka">No reviews yet</span>
+              )}
+            </div>
           </div>
 
           <div className="pt-6 border-t border-gray-200">
-            <h3 className="text-xl font-outfit font-semibold mb-3 text-gray-900">
-              School Details
-            </h3>
+            <h3 className="text-xl font-outfit font-semibold mb-3 text-gray-900">School Details</h3>
             <p className="text-gray-700 font-fredoka whitespace-pre-wrap leading-relaxed">
               {school.details || "No additional details available."}
             </p>
@@ -265,17 +274,17 @@ export default function SchoolDetailsPage() {
         </div>
       </div>
 
-      {/* ===== Student Reviews Section ===== */}
+      {/* Student Reviews */}
       <div
         className={`transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
         }`}
         style={{ transitionDelay: "500ms" }}
       >
-        <ReviewSection schoolId={school.id} />
+        <ReviewSection schoolId={school.id} averageRating={averageRating} />
       </div>
 
-      {/* ===== Nearby Schools Section ===== */}
+      {/* Nearby Schools */}
       <div
         className={`w-full bg-[#FFDE59] py-10 px-15 transition-all duration-700 ease-out ${
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
@@ -289,21 +298,15 @@ export default function SchoolDetailsPage() {
         </div>
 
         {nearbyLoading ? (
-          <p className="text-center text-gray-800 font-fredoka">
-            Finding nearby schools...
-          </p>
+          <p className="text-center text-gray-800 font-fredoka">Finding nearby schools...</p>
         ) : locationError ? (
-          <p className="text-center text-red-600 font-fredoka">
-            {locationError}
-          </p>
+          <p className="text-center text-red-600 font-fredoka">{locationError}</p>
         ) : nearbySchools.length > 0 ? (
           <div className="max-w-[1300px] mx-auto">
             <NearbySchoolCarousel school_card={nearbySchools} />
           </div>
         ) : (
-          <p className="text-center text-gray-800 font-fredoka">
-            No nearby schools found.
-          </p>
+          <p className="text-center text-gray-800 font-fredoka">No nearby schools found.</p>
         )}
       </div>
     </div>
