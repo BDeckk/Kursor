@@ -20,9 +20,10 @@ interface InputFieldProps {
   label: string;
   name: keyof FormData;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
 interface SelectFieldProps {
@@ -112,7 +113,7 @@ export default function KursorProfileForm() {
       },
       (err) => {
         console.error("GPS error:", err);
-        setLocationStatus("⚠️ Could not retrieve GPS location. Please enter manually.");
+        setLocationStatus("⚠️ Could not retrieve GPS location. Please allow location access.");
       }
     );
   };
@@ -123,6 +124,7 @@ export default function KursorProfileForm() {
       return;
     }
 
+    // Validate required fields
     if (
       !formData.full_name ||
       !formData.email ||
@@ -134,7 +136,7 @@ export default function KursorProfileForm() {
       !formData.latitude ||
       !formData.longitude
     ) {
-      setError("Please fill in all required fields, including address, latitude, and longitude.");
+      setError("Please fill in all required fields and set your location using GPS.");
       return;
     }
 
@@ -184,7 +186,7 @@ export default function KursorProfileForm() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Left */}
+      {/* Left side illustration */}
       <div className="w-[55%] flex flex-col">
         <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
           <div className="flex items-center pl-7">
@@ -212,13 +214,12 @@ export default function KursorProfileForm() {
           <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
           <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL","STEM","ABM","HUMSS","GAS","ICT","GA"]} />
 
-          {/* Address */}
           <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
 
-          {/* Latitude / Longitude side by side with button */}
+          {/* Latitude / Longitude side by side with GPS button */}
           <div className="flex items-center space-x-2">
-            <InputField label="Latitude *" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="Latitude" />
-            <InputField label="Longitude *" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="Longitude" />
+            <InputField label="Latitude *" name="latitude" value={formData.latitude} readOnly />
+            <InputField label="Longitude *" name="longitude" value={formData.longitude} readOnly />
             <button onClick={setLocation} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Set Location</button>
           </div>
           {locationStatus && <p className="text-sm text-gray-600">{locationStatus}</p>}
@@ -241,7 +242,8 @@ export default function KursorProfileForm() {
   );
 }
 
-function InputField({ label, name, value, onChange, type="text", placeholder="" }: InputFieldProps) {
+// InputField
+function InputField({ label, name, value, onChange, type="text", placeholder="", readOnly=false }: InputFieldProps) {
   const isRequired = label.includes('*');
   return (
     <div className="relative pb-4 flex-1">
@@ -252,6 +254,7 @@ function InputField({ label, name, value, onChange, type="text", placeholder="" 
         value={value}
         onChange={onChange}
         required={isRequired}
+        readOnly={readOnly}
         max={type==="date"?new Date().toISOString().split('T')[0]:undefined}
         placeholder={placeholder}
         className="w-full px-4 py-3 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-transparent"
@@ -260,6 +263,7 @@ function InputField({ label, name, value, onChange, type="text", placeholder="" 
   );
 }
 
+// SelectField
 function SelectField({ label, name, value, onChange, options }: SelectFieldProps) {
   const isRequired = label.includes('*');
   return (

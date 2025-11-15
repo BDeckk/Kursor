@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Heart, Star, Award } from "lucide-react";
-import { supabase } from "@/supabaseClient";
+import { LikeButton } from "./likebutton";
+import { useSchoolLikes } from "@/hooks/useSchoolLikes";
 import {
   Carousel,
   CarouselContent,
@@ -12,21 +12,12 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-const SUPABASE_STORAGE_URL =
-  "https://fiujlzfouidrxbechcxa.supabase.co/storage/v1/object/public";
+// Helper: convert rank (1 = best) to star rating (minStars → maxStars)
+const getStarRating = (rank: number, maxRank = 10, minStars = 3, maxStars = 5) => {
+  const stars = maxStars - ((rank - 1) * (maxStars - minStars)) / (maxRank - 1);
+  return Math.round(stars * 2) / 2; // round to nearest 0.5
+};
 
-function resolveImageUrl(imagePath?: string | null) {
-  if (!imagePath) return null;
-  const trimmed = String(imagePath).trim();
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.includes("/storage/v1/object/public/")) return trimmed;
-
-  const segments = trimmed.split("/").filter(Boolean);
-  const encoded = segments.map((s) => encodeURIComponent(s)).join("/");
-  return `${SUPABASE_STORAGE_URL}/school_logos/${encoded}`;
-}
 
 export function TopUniversitiesCarousel({
   universities,
@@ -34,79 +25,16 @@ export function TopUniversitiesCarousel({
 }: {
   universities: {
     id: number | string;
+    university_id: number | string;
     rank: number;
     schoolname: string;
     image?: string | null;
-    country?: string | null;
     reason?: string | null;
   }[];
   userId: string;
 }) {
   const router = useRouter();
-  const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
-  const [likedUnis, setLikedUnis] = React.useState<Record<string, boolean>>({});
-
-  React.useEffect(() => {
-    if (!userId) return;
-
-    const fetchLikes = async () => {
-      const { data, error } = await supabase
-        .from("school_likes")
-        .select("school_id")
-        .eq("user_id", userId);
-
-      if (error) {
-        console.error("Error fetching likes:", error.message);
-        return;
-      }
-
-      const likedMap = (data ?? []).reduce(
-        (acc: Record<string, boolean>, row) => {
-          acc[String(row.school_id)] = true;
-          return acc;
-        },
-        {}
-      );
-      setLikedUnis(likedMap);
-    };
-
-    fetchLikes();
-  }, [userId]);
-
-  const toggleLike = async (schoolId: string | number) => {
-    if (!userId) {
-      alert("Please log in to like a university.");
-      return;
-    }
-
-    const isLiked = likedUnis[String(schoolId)];
-    setLikedUnis((prev) => ({ ...prev, [schoolId]: !isLiked }));
-
-    const idValue =
-      typeof schoolId === "string" && schoolId.includes("-")
-        ? schoolId
-        : Number(schoolId);
-
-    if (isLiked) {
-      const { error } = await supabase
-        .from("school_likes")
-        .delete()
-        .eq("user_id", userId)
-        .eq("school_id", idValue);
-      if (error) {
-        console.error("Failed to unlike:", error.message);
-        setLikedUnis((prev) => ({ ...prev, [schoolId]: true }));
-      }
-    } else {
-      const { error } = await supabase
-        .from("school_likes")
-        .insert([{ user_id: userId, school_id: idValue }]);
-      if (error) {
-        console.error("Failed to like:", error.message);
-        setLikedUnis((prev) => ({ ...prev, [schoolId]: false }));
-      }
-    }
-  };
+  const { likedSchools, likeCountMap, toggleLike } = useSchoolLikes(userId);
 
   const handleCardClick = (id: string | number) => {
     router.push(`/school-details/${id}`);
@@ -116,53 +44,38 @@ export function TopUniversitiesCarousel({
     <Carousel className="w-full relative overflow-visible">
       <CarouselContent className="gap-2 px-12">
         {universities.map((uni, index) => {
-          const imageUrl = resolveImageUrl(uni.image);
-          const idKey = String(uni.id);
-          const isFailed = !!failedImages[idKey];
-          const isLiked = likedUnis[idKey];
+          const idKey = String(uni.university_id);
+          const isLiked = likedSchools[idKey];
+          const likeCount = likeCountMap[idKey] || 0;
+          const rating = getStarRating(uni.rank);
 
           return (
-            <CarouselItem
-              key={index}
-              className="basis-auto min-w-[230px] max-w-[230px]"
-            >
+            <CarouselItem key={index} className="basis-auto min-w-[230px] max-w-[230px]">
               <div
                 onClick={() => handleCardClick(uni.id)}
-                className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col justify-between text-center h-[380px] relative hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col justify-between text-center h-[370px] relative hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 {/* Like Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(uni.id);
-                  }}
-                  className={`absolute top-4 right-4 transition-colors ${
-                    isLiked ? "text-red-500" : "text-gray-400 hover:text-red-500"
-                  }`}
-                >
-                  <Heart
-                    className={`w-6 h-6 ${
-                      isLiked ? "fill-red-500 text-red-500" : ""
-                    }`}
-                  />
-                </button>
+                <LikeButton
+                  userId={userId}
+                  schoolId={uni.university_id}
+                  liked={isLiked}
+                  toggleLike={toggleLike}
+                  className="top-4 right-4"
+                />
 
-                {/* Rank Badge */}
+                {/* Rank */}
                 <div className="absolute top-4 left-4 flex items-center gap-1 text-sm font-semibold text-gray-700">
-                  <Award className="w-4 h-4 text-gray-500" />
                   <span>#{uni.rank}</span>
                 </div>
 
-                {/* Image Section */}
+                {/* School Image */}
                 <div className="w-32 h-32 flex items-center justify-center mx-auto mt-6">
-                  {imageUrl && !isFailed ? (
+                  {uni.image ? (
                     <img
-                      src={imageUrl}
+                      src={uni.image}
                       alt={uni.schoolname}
                       className="w-full h-full object-contain rounded-md"
-                      onError={() => {
-                        setFailedImages((prev) => ({ ...prev, [idKey]: true }));
-                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
@@ -171,34 +84,60 @@ export function TopUniversitiesCarousel({
                   )}
                 </div>
 
-                {/* Docked Content Section */}
+                {/* Name and Reason */}
                 <div className="flex flex-col justify-between flex-grow mt-4 w-full">
-                  {/* Fixed-height school name */}
                   <h3 className="text-base font-bold text-black mb-2 h-[3.5rem] flex items-center justify-center text-center">
                     {uni.schoolname}
                   </h3>
+                  <p className="text-xs text-gray-500 line-clamp-3 h-[3rem]">
+                    {uni.reason || ""}
+                  </p>
+                </div>
 
-                  {/* Fixed-height description area */}
-                  <div className="pt-2">
-                    <p className="text-xs text-gray-500 line-clamp-3 h-[3rem]">
-                      {uni.reason || ""}
-                    </p>
-                  </div>
+                {/* Star Rating */}
+                <div className="border-t border-gray-100 mt-4 pt-3 pb-2">
+                  <div className="flex justify-center items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const fullStars = Math.floor(rating);
+                      const hasHalfStar = rating % 1 === 0.5;
+                      const isFull = i < fullStars;
+                      const isHalf = i === fullStars && hasHalfStar;
 
-                  {/* Rating docked at the bottom */}
-                  <div className="flex flex-col items-center justify-center border-t border-gray-100 mt-4 pt-3 pb-2">
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= 4
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                      return (
+                        <svg
+                          key={i}
+                          viewBox="0 0 20 20"
+                          className="w-4 h-4"
+                        >
+                          {/* Empty Star */}
+                          <path
+                            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+                            fill="#E5E7EB"
+                          />
+                          {/* Full or Half Star */}
+                          {isFull && (
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+                              fill="#FFD700"
+                            />
+                          )}
+                          {isHalf && (
+                            <defs>
+                              <linearGradient id={`halfGrad${index}`} x1="0" x2="1" y1="0" y2="0">
+                                <stop offset="50%" stopColor="#FFD700" />
+                                <stop offset="50%" stopColor="#E5E7EB" />
+                              </linearGradient>
+                            </defs>
+                          )}
+                          {isHalf && (
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+                              fill={`url(#halfGrad${index})`}
+                            />
+                          )}
+                        </svg>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

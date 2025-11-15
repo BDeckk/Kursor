@@ -8,6 +8,7 @@ import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { supabase } from "@/supabaseClient";
 import { useState, useEffect } from "react";
 import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
+import { TopLikedSchoolsCarousel } from "@/components/TopLikeSchoolsCarousel";
 
 /* --- Simple Skeleton (used only if you later want it) --- */
 const SkeletonCarousel = () => (
@@ -90,7 +91,7 @@ export default function SchoolPage() {
           // store to supabase in background (non-blocking)
           supabase.from("top_universities").insert(
             finalData.map((u: any) => ({
-              university_id: u.id,
+              university_id: u.univerity_id,
               rank: u.rank,
               schoolname: u.schoolname,
               image: u.image,
@@ -219,28 +220,18 @@ export default function SchoolPage() {
 
       {/* === Recommended Universities Section === */}
       <div
-        className={`max-w-7xl mx-auto py-12 px-6 transition-all duration-700 ease-out ${
-          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        }`}
-        style={{ transitionDelay: "600ms" }}
-      >
-        <h2 className="text-3xl font-bold text-gray-800 mb-8">
-          Recommended Universities Based on{" "}
-          <span className="text-yellow-400">Your Assessment</span>
-        </h2>
+          className={`max-w-7xl mx-auto py-12 px-6 transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+          style={{ transitionDelay: "600ms" }}
+        >
+          <h2 className="text-3xl font-bold text-gray-800 mb-8">
+            Top Liked Schools{" "}
+            <span className="text-yellow-400">by Users</span>
+          </h2>
 
-        {nearbyLoading ? (
-          <SkeletonCarousel />
-        ) : locationError ? (
-          <div className="text-center text-red-600 font-fredoka">{locationError}</div>
-        ) : nearbySchools.length > 0 ? (
-          <NearbySchoolCarousel school_card={nearbySchools} userId={user?.id ?? ""} />
-        ) : (
-          <div className="text-center text-gray-800 font-fredoka">
-            No nearby schools found.
-          </div>
-        )}
-      </div>
+          <TopLikedSchoolsCarousel userId={user?.id ?? ""} />
+        </div>
     </div>
   );
 }

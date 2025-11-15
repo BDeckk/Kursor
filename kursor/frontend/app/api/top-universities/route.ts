@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/supabaseClient";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { randomUUID } from "crypto";
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
 if (!geminiApiKey) {
@@ -12,14 +11,14 @@ const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
 interface School {
   id: string;
+  uni_id: string;
   name: string;
   location?: string | null;
   description?: string | null;
   school_logo?: string | null;
-  school_picture?: string | null;
 }
 
-// ✅ Build prompt for Gemini
+// Build Gemini prompt
 function buildPrompt(schools: School[]): string {
   return `
 You are a university ranking assistant for the region of Cebu, Philippines.
@@ -29,9 +28,7 @@ List of institutions:
 ${schools
   .map(
     (s, i) =>
-      `${i + 1}. ${s.name} — Location: ${s.location ?? "N/A"}. ${
-        s.description ?? ""
-      }`
+      `${i + 1}. ${s.name} — Location: ${s.location ?? "N/A"}. ${s.description ?? ""}`
   )
   .join("\n")}
 
@@ -52,7 +49,7 @@ Return only the JSON array, no text before or after.
 `;
 }
 
-// Normalize for matching - with null safety
+// Normalize strings for matching
 function normalize(str: string | null | undefined): string {
   if (!str) return "";
   return str.toLowerCase().trim().replace(/\s+/g, " ");
@@ -60,40 +57,17 @@ function normalize(str: string | null | undefined): string {
 
 export async function GET() {
   try {
-    // Check if Gemini API is configured
-    if (!genAI) {
-      console.error("❌ Gemini API not initialized - missing API key");
-      return NextResponse.json(
-        { error: "Gemini API key is not configured" },
-        { status: 500 }
-      );
-    }
-
-    console.log("📡 Fetching schools from Supabase...");
-
-    //  Fetch all schools from Supabase
-    const { data, error } = await supabase
-      .from("schools")
-      .select("*");
-
+    // Fetch all schools from Supabase
+    const { data, error } = await supabase.from("schools").select("*");
     if (error) {
       console.error("❌ Supabase error:", error);
-      throw error;
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    console.log(`✅ Fetched ${data?.length || 0} schools`);
-
     if (!data || data.length === 0) {
-      return NextResponse.json(
-        { error: "No schools found in database" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No schools found in database" }, { status: 404 });
     }
 
-    // Filter out schools without names
     const validSchools = data.filter((s) => s.name && s.name.trim() !== "");
-    console.log(`✅ ${validSchools.length} schools have valid names`);
-
     if (validSchools.length === 0) {
       return NextResponse.json(
         { error: "No schools with valid names found" },
@@ -101,47 +75,39 @@ export async function GET() {
       );
     }
 
-    //  Build prompt for Gemini
-    console.log("🔨 Building prompt for Gemini...");
-    const prompt = buildPrompt(validSchools);
+    let geminiParsed: { rank: number; name: string; reason?: string }[] = [];
 
-    console.log("🤖 Calling Gemini API...");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    if (genAI) {
+      try {
+        console.log("🔨 Building prompt for Gemini...");
+        const prompt = buildPrompt(validSchools);
 
-    console.log("🧠 Gemini raw response:", text);
+        console.log("🤖 Calling Gemini API...");
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
 
-    //  Parse Gemini response JSON
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) {
-      console.error("❌ Gemini did not return valid JSON. Response:", text);
-      throw new Error("Gemini did not return JSON format");
+        console.log("🧠 Gemini raw response:", text);
+
+        const match = text.match(/\[[\s\S]*\]/);
+        if (match) {
+          geminiParsed = JSON.parse(match[0]);
+        } else {
+          console.warn("⚠️ Gemini did not return valid JSON. Returning empty array.");
+        }
+      } catch (geminiError) {
+        console.error("❌ Error calling Gemini API:", geminiError);
+      }
     }
 
-    let parsed: { rank: number; name: string; reason?: string }[];
-    try {
-      parsed = JSON.parse(match[0]);
-    } catch (parseError) {
-      console.error("❌ JSON parse error:", parseError);
-      console.error("Attempted to parse:", match[0]);
-      throw new Error("Failed to parse Gemini response as JSON");
-    }
-
-    console.log(`✅ Parsed ${parsed.length} universities from Gemini`);
-
-    // Match Gemini results to Supabase data
-    const matched = parsed
+    // Match Gemini results to Supabase schools
+    const matched = geminiParsed
       .map((g) => {
         const normalizedGeminiName = normalize(g.name);
 
         const found = validSchools.find((s) => {
           const normalizedSchoolName = normalize(s.name);
-
-          // Skip if either name is empty after normalization
           if (!normalizedGeminiName || !normalizedSchoolName) return false;
-
-          // Check both directions: does school name include gemini name OR vice versa
           return (
             normalizedSchoolName.includes(normalizedGeminiName) ||
             normalizedGeminiName.includes(normalizedSchoolName)
@@ -150,7 +116,7 @@ export async function GET() {
 
         if (!found) {
           console.log(`⚠️ No match found for: ${g.name} - skipping`);
-          return null; // Return null for unmatched schools
+          return null;
         }
 
         return {
@@ -161,31 +127,27 @@ export async function GET() {
           reason: g.reason ?? "Highly reputable university in Cebu",
         };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null); 
+      .filter((item): item is NonNullable<typeof item> => item !== null);
 
-    console.log(`✅ Successfully matched ${matched.length} universities`);
+    // Fallback: if Gemini failed, return top 10 valid schools from Supabase
+    const topUniversities =
+      matched.length > 0
+        ? matched.slice(0, 10)
+        : validSchools.slice(0, 10).map((s, i) => ({
+            id: s.id,
+            schoolname: s.name,
+            image: s.school_logo ?? null,
+            rank: i + 1,
+            reason: "Fallback university ranking",
+          }));
 
-    // 5️Return top 10
     return NextResponse.json({
-      topUniversities: matched.slice(0, 10),
-      raw: text,
+      topUniversities,
+      raw: geminiParsed,
     });
   } catch (err: unknown) {
     console.error("❌ Error in top-universities API:", err);
-
-    // More detailed error logging
-    if (err instanceof Error) {
-      console.error("Error name:", err.name);
-      console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
-    }
-
-    const errorMessage =
-      err instanceof Error ? err.message : "Unknown error occurred";
-
-    return NextResponse.json(
-      { error: errorMessage, details: String(err) },
-      { status: 500 }
-    );
+    const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
