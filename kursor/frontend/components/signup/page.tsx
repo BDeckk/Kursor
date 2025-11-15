@@ -242,17 +242,25 @@ export default function SignupModal({
           </div>
 
           {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
-              Already have an account?{" "}
-              <a
-                className="font-semibold hover:underline"
-                style={{ color: "#FFDE59" }}
-              >
-                Log in
-              </a>
-            </p>
-          </div>
+         <div className="mt-6 text-center">
+          <p className="text-gray-600 text-sm">
+            Already have an account?{" "}
+            <span
+              className="font-semibold hover:underline cursor-pointer"
+              style={{ color: "#FFDE59" }}
+              onClick={() => {
+                handleClose();           // Close signup modal
+                // Open login modal by calling parent's setter
+                const event = new CustomEvent("openLogin");
+                window.dispatchEvent(event);
+              }}
+            >
+              Log in
+            </span>
+          </p>
+        </div>
+
+
         </div>
       )}
     </div>

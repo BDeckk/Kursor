@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Star, Heart } from "lucide-react";
+import { LikeButton } from "../likebutton";
 import { supabase } from "@/supabaseClient";
 import {
   Carousel,
@@ -17,88 +17,125 @@ const SUPABASE_STORAGE_URL =
 
 function resolveImageUrl(imagePath?: string | null) {
   if (!imagePath) return null;
-  const trimmed = String(imagePath).trim();
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed.replace("/temporary-school-logo/", "/school_logos/");
-  }
-  if (trimmed.includes("/storage/v1/object/public/")) {
-    return `${trimmed}`.replace("/temporary-school-logo/", "/school_logos/");
-  }
-  const segments = trimmed.split("/").filter(Boolean);
-  if (segments[0] === "school_logos") {
-    const rest = segments.slice(1).map(s => encodeURIComponent(s)).join("/");
-    return `${SUPABASE_STORAGE_URL}/school_logos/${rest}`;
-  }
-  const encoded = segments.map(s => encodeURIComponent(s)).join("/");
-  return `${SUPABASE_STORAGE_URL}/school_logos/${encoded}`;
+  if (/^https?:\/\//i.test(imagePath)) return imagePath;
+  const segments = imagePath.split("/").filter(Boolean);
+  return `${SUPABASE_STORAGE_URL}/${segments.map(encodeURIComponent).join("/")}`;
 }
 
-interface LikedSchool {
-  id: number | string;
+function renderStars(rating: number) {
+  const stars = [];
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+
+  for (let i = 0; i < 5; i++) {
+    const isFull = i < fullStars;
+    const isHalf = i === fullStars && hasHalfStar;
+
+    stars.push(
+      <svg key={i} viewBox="0 0 20 20" className="w-4 h-4">
+        {isHalf && (
+          <defs>
+            <linearGradient id={`halfGrad-${i}`} x1="0" x2="1" y1="0" y2="0">
+              <stop offset="50%" stopColor="#FFD700" />
+              <stop offset="50%" stopColor="#E5E7EB" />
+            </linearGradient>
+          </defs>
+        )}
+        <path
+          d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+          fill="#E5E7EB"
+        />
+        {isFull && (
+          <path
+            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+            fill="#FFD700"
+          />
+        )}
+        {isHalf && (
+          <path
+            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.946a1 1 0 00.95.69h4.15c.969 0 1.371 1.24.588 1.81l-3.36 2.44a1 1 0 00-.364 1.118l1.287 3.945c.3.921-.755 1.688-1.54 1.118l-3.36-2.44a1 1 0 00-1.176 0l-3.36 2.44c-.784.57-1.838-.197-1.539-1.118l1.286-3.945a1 1 0 00-.364-1.118L2.025 9.373c-.783-.57-.38-1.81.588-1.81h4.15a1 1 0 00.95-.69l1.286-3.946z"
+            fill={`url(#halfGrad-${i})`}
+          />
+        )}
+      </svg>
+    );
+  }
+
+  return stars;
+}
+
+interface School {
+  id: string;
   schoolname: string;
   image?: string | null;
-  location?: string;
 }
 
 export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
   const router = useRouter();
-  const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
-  const [likedSchools, setLikedSchools] = React.useState<LikedSchool[]>([]);
+  const [schools, setSchools] = React.useState<School[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [likedSchools, setLikedSchools] = React.useState<Record<string, boolean>>({});
+  const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
+  const [averageRatings, setAverageRatings] = React.useState<Record<string, number>>({});
 
-  // Fetch liked schools for the current user
   React.useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
 
     const fetchLikedSchools = async () => {
       try {
-        // Get school IDs that the user has liked
-        const { data: likes, error: likesError } = await supabase
+        const { data: likesData } = await supabase
           .from("school_likes")
           .select("school_id")
           .eq("user_id", userId);
 
-        if (likesError) {
-          console.error("Error fetching likes:", likesError.message);
+        if (!likesData?.length) {
+          setSchools([]);
           setLoading(false);
           return;
         }
 
-        if (!likes || likes.length === 0) {
-          setLikedSchools([]);
-          setLoading(false);
-          return;
-        }
+        const schoolIds = likesData.map((l) => l.school_id);
 
-        // Get school details for liked schools
-        const schoolIds = likes.map(like => like.school_id);
-        const { data: schools, error: schoolsError } = await supabase
+        const { data: schoolsData } = await supabase
           .from("schools")
-          .select("id, name, image_url, location")
+          .select("id, name, school_logo")
           .in("id", schoolIds);
 
-        if (schoolsError) {
-          console.error("Error fetching schools:", schoolsError.message);
-          setLoading(false);
-          return;
-        }
-
-        // Map to the expected format
-        const formattedSchools = (schools || []).map(school => ({
-          id: school.id,
-          schoolname: school.name,
-          image: school.image_url,
-          location: school.location
+        const mapped = (schoolsData ?? []).map((s) => ({
+          id: String(s.id),
+          schoolname: s.name,
+          image: s.school_logo,
         }));
 
-        setLikedSchools(formattedSchools);
+        const likedMap: Record<string, boolean> = {};
+        schoolIds.forEach((id) => {
+          likedMap[String(id)] = true;
+        });
+
+        setSchools(mapped);
+        setLikedSchools(likedMap);
+
+        const { data: reviewsData } = await supabase
+          .from("reviews")
+          .select("school_id, rating")
+          .in("school_id", schoolIds);
+
+        const ratingMap: Record<string, { sum: number; count: number }> = {};
+        reviewsData?.forEach((r: any) => {
+          const idStr = String(r.school_id);
+          if (!ratingMap[idStr]) ratingMap[idStr] = { sum: 0, count: 0 };
+          ratingMap[idStr].sum += r.rating;
+          ratingMap[idStr].count += 1;
+        });
+
+        const avgMap: Record<string, number> = {};
+        Object.entries(ratingMap).forEach(([id, val]) => {
+          avgMap[id] = val.count > 0 ? val.sum / val.count : 0;
+        });
+
+        setAverageRatings(avgMap);
       } catch (err) {
-        console.error("Unexpected error:", err);
+        console.error("Error fetching liked schools or ratings:", err);
       } finally {
         setLoading(false);
       }
@@ -107,110 +144,67 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
     fetchLikedSchools();
   }, [userId]);
 
-  // Unlike handler (removes from liked list)
-  const handleUnlike = async (schoolId: string | number) => {
+  const toggleLike = async (schoolId: string | number) => {
     if (!userId) {
-      alert("Please log in to unlike a school.");
+      alert("Please log in to like this school.");
       return;
     }
 
-    if (!schoolId) {
-      console.error("Missing school ID when unliking");
-      return;
-    }
+    const idKey = String(schoolId);
+    const isLiked = likedSchools[idKey];
+    setLikedSchools((prev) => ({ ...prev, [idKey]: !isLiked }));
 
-    // Determine if schoolId is numeric or UUID
-    const isUuid = typeof schoolId === "string" && schoolId.includes("-");
-    const idValue = isUuid ? schoolId : Number(schoolId);
-
-    if (!idValue || (typeof idValue === "number" && isNaN(idValue))) {
-      console.error("Invalid schoolId:", schoolId);
-      return;
-    }
-
-    // Optimistically remove from UI
-    setLikedSchools(prev => prev.filter(school => String(school.id) !== String(schoolId)));
-
-    // Delete from database
-    const { error } = await supabase
-      .from("school_likes")
-      .delete()
-      .eq("user_id", userId)
-      .eq("school_id", idValue);
-
-    if (error) {
-      console.error("Failed to unlike:", error.message);
-      // Optionally re-fetch to restore the item if deletion failed
-      // For now, we'll leave it removed from UI
+    try {
+      if (!isLiked) {
+        await supabase.from("school_likes").insert({ user_id: userId, school_id: schoolId });
+      } else {
+        await supabase
+          .from("school_likes")
+          .delete()
+          .eq("user_id", userId)
+          .eq("school_id", schoolId);
+      }
+    } catch (err) {
+      console.error("Error toggling like:", err);
+      setLikedSchools((prev) => ({ ...prev, [idKey]: isLiked }));
     }
   };
 
-  const handleCardClick = (id: string | number) => {
-    router.push(`/school-details/${id}`);
-  };
-
-  if (loading) {
-    return (
-      <div className="w-full py-12 text-center text-gray-500 font-fredoka">
-        Loading liked schools...
-      </div>
-    );
-  }
-
-  if (likedSchools.length === 0) {
-    return (
-      <div className="w-full py-12 text-center text-gray-500 font-fredoka">
-        No liked schools yet. Start exploring schools and save your favorites!
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center py-6">Loading liked schools...</div>;
+  if (!schools.length)
+    return <div className="text-center py-6 text-gray-700">You have no liked schools yet.</div>;
 
   return (
     <Carousel className="w-full relative overflow-visible">
       <CarouselContent className="gap-2 px-12">
-        {likedSchools.map((school, index) => {
-          const imageUrl = resolveImageUrl(school.image);
+        {schools.map((school) => {
           const idKey = String(school.id);
-          const isFailed = !!failedImages[idKey];
+          const imageUrl = resolveImageUrl(school.image);
+          const isLiked = likedSchools[idKey] ?? false;
+          const avgRating = averageRatings[idKey];
 
           return (
-            <CarouselItem
-              key={index}
-              className="basis-auto min-w-[230px] max-w-[230px]"
-            >
+            <CarouselItem key={idKey} className="basis-auto min-w-[230px] max-w-[230px]">
               <div
-                onClick={() => handleCardClick(school.id)}
-                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300
-                          px-3 py-6 h-[320px]"
+                onClick={() => router.push(`/school-details/${school.id}`)}
+                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[360px]"
               >
-                {/* unlike button (absolute) - always filled red since these are liked schools */}
-                <button
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleUnlike(school.id);
-                  }}
-                  className="absolute top-4 right-4 text-red-500 hover:text-red-600 transition-colors"
-                >
-                  <Heart className="w-6 h-6 fill-red-500 text-red-500" />
-                </button>
+                <LikeButton
+                  userId={userId}
+                  schoolId={school.id}
+                  liked={isLiked}
+                  toggleLike={toggleLike}
+                  className="absolute top-4 right-4"
+                />
 
-                {/* MAIN CENTER WRAPPER: centers logo + name */}
                 <div className="flex flex-col items-center justify-center flex-1">
                   <div className="w-32 h-32 flex items-center justify-center mb-4">
-                    {imageUrl && !isFailed ? (
+                    {imageUrl && !failedImages[idKey] ? (
                       <img
                         src={imageUrl}
                         alt={school.schoolname}
                         className="w-full h-full object-contain rounded-md"
-                        onError={() => setFailedImages(prev => ({ ...prev, [idKey]: true }))}
-                        onLoad={() =>
-                          setFailedImages(prev => {
-                            if (!prev[idKey]) return prev;
-                            const copy = { ...prev };
-                            delete copy[idKey];
-                            return copy;
-                          })
-                        }
+                        onError={() => setFailedImages((p) => ({ ...p, [idKey]: true }))}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
@@ -219,23 +213,16 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
                     )}
                   </div>
 
-                  <h3
-                    className="text-base font-bold font-outfit text-black mb-0 px-2 text-center"
-                    style={{ lineHeight: 1.15 }}
-                  >
-                    {school.schoolname}
-                  </h3>
-                </div>
-
-                {/* BOTTOM (reviews) */}
-                <div className="w-full mt-auto space-y-1 pt-4">
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">4.79 critique review</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-gray-700 font-fredoka">4.38 student review</span>
+                  {/* Fixed height container for name + rating */}
+                  <div className="h-16 flex flex-col items-center justify-center">
+                    <h3 className="text-base font-bold text-black mb-1 px-2 text-center">
+                      {school.schoolname}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      {avgRating
+                        ? renderStars(avgRating)
+                        : <span className="text-gray-500 text-sm">No student reviews</span>}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -244,8 +231,8 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
         })}
       </CarouselContent>
 
-      <CarouselPrevious className="text-gray-800 hover:text-yellow-500 -left-20" />
-      <CarouselNext className="text-gray-800 hover:text-yellow-500 -right-20" />
+      <CarouselPrevious className="absolute top-1/2 -translate-y-1/2 left-2 text-gray-800 hover:text-yellow-500 z-10" />
+      <CarouselNext className="absolute top-1/2 -translate-y-1/2 right-2 text-gray-800 hover:text-yellow-500 z-10" />
     </Carousel>
   );
 }

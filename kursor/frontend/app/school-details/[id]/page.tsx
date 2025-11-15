@@ -275,13 +275,15 @@ export default function SchoolDetailsPage() {
       </div>
 
       {/* Student Reviews */}
-      <div
-        className={`transition-all duration-700 ease-out ${
-          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-        }`}
-        style={{ transitionDelay: "500ms" }}
-      >
-        <ReviewSection schoolId={school.id} averageRating={averageRating} />
+      <div className="pl-[10%] pr-[10%]">
+        <div
+          className={`transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+          style={{ transitionDelay: "500ms" }}
+        >
+          <ReviewSection schoolId={school.id} averageRating={averageRating} />
+        </div>
       </div>
 
       {/* Nearby Schools */}

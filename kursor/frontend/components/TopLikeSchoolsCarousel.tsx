@@ -21,7 +21,6 @@ function resolveImageUrl(imagePath?: string | null) {
   if (!imagePath) return null;
   const trimmed = String(imagePath).trim();
   if (!trimmed) return null;
-
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   const segments = trimmed.split("/").filter(Boolean);
   const encoded = segments.map((s) => encodeURIComponent(s)).join("/");
@@ -29,11 +28,10 @@ function resolveImageUrl(imagePath?: string | null) {
 }
 
 interface School {
-  id: number | string;
-  
+  id: string;
   schoolname: string;
   image?: string | null;
-  likes?: number;
+  likes: number;
 }
 
 export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
@@ -42,43 +40,45 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
   const [loading, setLoading] = React.useState(true);
   const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
 
-  const { likedSchools, likeCountMap, toggleLike } = useSchoolLikes(userId);
+  // Only for coloring the heart
+  const { likedSchools, toggleLike } = useSchoolLikes(userId);
 
   React.useEffect(() => {
-    const fetchTopLikedSchools = async () => {
+    const fetchSchools = async () => {
       try {
-        const { data: likesData, error: likesError } = await supabase
-          .from("school_likes")
-          .select("school_id");
+        // 1️⃣ Fetch total likes per school using RPC
+        const { data: likeData, error: likeError } = await supabase.rpc(
+          "get_total_likes_per_school"
+        );
 
-        if (likesError) throw likesError;
-        if (!likesData?.length) {
+        if (likeError) throw likeError;
+        if (!likeData || likeData.length === 0) {
           setSchools([]);
           return;
         }
 
-        const likeCount: Record<string, number> = {};
-        likesData.forEach((l) => {
-          const id = String(l.school_id);
-          likeCount[id] = (likeCount[id] || 0) + 1;
-        });
+        const schoolIds = likeData.map((l: any) => l.school_id);
 
-        const uniqueIds = Array.from(new Set(likesData.map((l) => l.school_id)));
-        const { data: schoolsData, error: schoolError } = await supabase
+        // 2️⃣ Fetch school details
+        const { data: schoolsData, error: schoolsError } = await supabase
           .from("schools")
           .select("id, name, school_logo")
-          .in("id", uniqueIds);
+          .in("id", schoolIds);
 
-        if (schoolError) throw schoolError;
+        if (schoolsError) throw schoolsError;
 
-        const merged = (schoolsData ?? [])
-          .map((s) => ({
-            id: s.id,
-            schoolname: s.name,
-            image: s.school_logo,
-            likes: likeCount[String(s.id)] ?? 0,
-          }))
-          .sort((a, b) => b.likes - a.likes);
+        // 3️⃣ Merge school details with total likes
+        const merged: School[] = (schoolsData ?? [])
+          .map((s) => {
+            const likeRow = likeData.find((l: any) => l.school_id === s.id);
+            return {
+              id: s.id,
+              schoolname: s.name,
+              image: s.school_logo,
+              likes: Number(likeRow?.total_likes ?? 0),
+            };
+          })
+          .sort((a, b) => b.likes - a.likes); // sort descending
 
         setSchools(merged);
       } catch (err) {
@@ -88,12 +88,17 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
       }
     };
 
-    fetchTopLikedSchools();
+    fetchSchools();
   }, []);
 
-  if (loading) return <div className="text-center py-6">Loading top liked schools...</div>;
-  if (schools.length === 0)
-    return <div className="text-center py-6 text-gray-700">No liked schools found.</div>;
+  if (loading)
+    return <div className="text-center py-6">Loading top liked schools...</div>;
+  if (!schools.length)
+    return (
+      <div className="text-center py-6 text-gray-700">
+        No liked schools found.
+      </div>
+    );
 
   return (
     <Carousel className="w-full relative overflow-visible">
@@ -101,7 +106,6 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
         {schools.map((school) => {
           const idKey = String(school.id);
           const isLiked = likedSchools[idKey];
-          const likeCount = likeCountMap[idKey] ?? school.likes ?? 0;
           const imageUrl = resolveImageUrl(school.image);
 
           return (
@@ -125,7 +129,9 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                         src={imageUrl}
                         alt={school.schoolname}
                         className="w-full h-full object-contain rounded-md"
-                        onError={() => setFailedImages((p) => ({ ...p, [idKey]: true }))}
+                        onError={() =>
+                          setFailedImages((prev) => ({ ...prev, [idKey]: true }))
+                        }
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
@@ -133,6 +139,7 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                       </div>
                     )}
                   </div>
+
                   <h3 className="text-base font-bold text-black mb-0 px-2 text-center">
                     {school.schoolname}
                   </h3>
@@ -144,7 +151,7 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                       isLiked ? "fill-red-500 text-red-500" : "text-gray-400"
                     }`}
                   />
-                  <span className="text-gray-700">{likeCount} likes</span>
+                  <span className="text-gray-700">{school.likes} likes</span>
                 </div>
               </div>
             </CarouselItem>

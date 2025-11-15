@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabaseClient";
 import { UserAuth } from "@/Context/AuthContext";
+import ProfileAvatar from "../ProfileAvatar";
 
 interface Review {
   id: string;
+  user_id?: string | null;
   username: string;
   rating: number;
   text: string;
+  created_at?: string;
   likes: number;
   liked: boolean;
   replies: Reply[];
@@ -16,9 +19,10 @@ interface Review {
 
 interface Reply {
   id: string;
+  user_id?: string | null;
   username: string;
   text: string;
-  created_at: string;
+  created_at?: string;
   parent_reply_id: string | null;
   likes: number;
   liked: boolean;
@@ -53,71 +57,87 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
   }, [session, getProfile]);
 
   // Fetch reviews + replies
-  useEffect(() => {
-    if (!schoolId) return;
+ useEffect(() => {
+  if (!schoolId) return;
 
-    const fetchData = async () => {
-      setLoading(true);
+  const fetchData = async () => {
+    if (!user) return; // we need user info to check likes
+    setLoading(true);
 
-      try {
-        const { data: reviewsData, error } = await supabase
-          .from("reviews")
-          .select("id, username, rating, text, created_at")
-          .eq("school_id", schoolId)
-          .order("created_at", { ascending: false });
+    try {
+      const { data: reviewsData, error } = await supabase
+        .from("reviews")
+        .select("id, user_id, username, rating, text, created_at")
+        .eq("school_id", schoolId)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        const reviewsWithExtras = await Promise.all(
-          (reviewsData || []).map(async (review) => {
-            // Likes
-            const { count: likeCount } = await supabase
-              .from("review_likes")
-              .select("*", { count: "exact", head: true })
-              .eq("review_id", review.id);
+      const reviewsWithExtras = await Promise.all(
+        (reviewsData || []).map(async (review: any) => {
+          // Likes count
+          const { count: likeCount } = await supabase
+            .from("review_likes")
+            .select("*", { count: "exact", head: true })
+            .eq("review_id", review.id);
 
-            // Replies
-            const { data: replies } = await supabase
-              .from("review_replies")
-              .select("id, username, text, created_at, parent_reply_id")
-              .eq("review_id", review.id)
-              .order("created_at", { ascending: true });
+          // Check if current user liked this review
+          const { data: userLikeData } = await supabase
+            .from("review_likes")
+            .select("*")
+            .eq("review_id", review.id)
+            .eq("user_id", user.id)
+            .single();
 
-            // Replies with like counts
-            const enrichedReplies = await Promise.all(
-              (replies || []).map(async (reply) => {
-                const { count: replyLikeCount } = await supabase
-                  .from("reply_likes")
-                  .select("*", { count: "exact", head: true })
-                  .eq("reply_id", reply.id);
+          // Replies
+          const { data: replies } = await supabase
+            .from("review_replies")
+            .select("id, user_id, username, text, created_at, parent_reply_id")
+            .eq("review_id", review.id)
+            .order("created_at", { ascending: true });
 
-                return {
-                  ...reply,
-                  likes: replyLikeCount || 0,
-                  liked: false,
-                };
-              })
-            );
+          const enrichedReplies = await Promise.all(
+            (replies || []).map(async (reply: any) => {
+              const { count: replyLikeCount } = await supabase
+                .from("reply_likes")
+                .select("*", { count: "exact", head: true })
+                .eq("reply_id", reply.id);
 
-            return {
-              ...review,
-              likes: likeCount || 0,
-              liked: false,
-              replies: enrichedReplies,
-            };
-          })
-        );
+              const { data: userReplyLike } = await supabase
+                .from("reply_likes")
+                .select("*")
+                .eq("reply_id", reply.id)
+                .eq("user_id", user.id)
+                .single();
 
-        setReviews(reviewsWithExtras);
-      } catch (err) {
-        console.error("Error fetching reviews:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+              return {
+                ...reply,
+                likes: replyLikeCount || 0,
+                liked: !!userReplyLike,
+              } as Reply;
+            })
+          );
 
-    fetchData();
-  }, [schoolId]);
+          return {
+            ...review,
+            likes: likeCount || 0,
+            liked: !!userLikeData,
+            replies: enrichedReplies,
+          } as Review;
+        })
+      );
+
+      setReviews(reviewsWithExtras);
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [schoolId, user]);
+
 
   // Like a review
   const handleLikeReview = async (reviewId: string) => {
@@ -127,80 +147,142 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
 
     const newLiked = !target.liked;
 
-    if (newLiked) {
-      await supabase.from("review_likes").insert([{ review_id: reviewId, user_id: user.id }]);
-    } else {
-      await supabase.from("review_likes").delete().match({ review_id: reviewId, user_id: user.id });
-    }
+    try {
+      if (newLiked) {
+        await supabase.from("review_likes").insert([{ review_id: reviewId, user_id: user.id }]);
+      } else {
+        await supabase.from("review_likes").delete().match({ review_id: reviewId, user_id: user.id });
+      }
 
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === reviewId ? { ...r, liked: newLiked, likes: r.likes + (newLiked ? 1 : -1) } : r
-      )
-    );
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId ? { ...r, liked: newLiked, likes: r.likes + (newLiked ? 1 : -1) } : r
+        )
+      );
+    } catch (err) {
+      console.error("Error toggling review like:", err);
+    }
   };
 
   // Like a reply
-  const handleLikeReply = async (replyId: string) => {
-    if (!user) return alert("Please log in to like replies.");
-    const allReplies = reviews.flatMap((r) => r.replies);
-    const target = allReplies.find((rep) => rep.id === replyId);
-    if (!target) return;
+const handleLikeReply = async (replyId: string) => {
+  if (!user) return alert("Please log in to like replies.");
 
-    const newLiked = !target.liked;
+  // Flatten all replies to find the target
+  const allReplies = reviews.flatMap((r) => r.replies);
+  const targetReply = allReplies.find((rep) => rep.id === replyId);
+  if (!targetReply) return;
 
+  const newLiked = !targetReply.liked;
+
+  // Find parent review (needed for review_id and school_id)
+  const parentReview = reviews.find((r) => r.replies.some((rep) => rep.id === replyId));
+  if (!parentReview) return;
+
+  try {
     if (newLiked) {
+      // Insert like
       await supabase.from("reply_likes").insert([{ reply_id: replyId, user_id: user.id }]);
+
+      // Insert notification for the author of the reply
+      // Avoid sending notification to yourself
+      if (targetReply.user_id && targetReply.user_id !== user.id) {
+        await supabase.from("notifications").insert([{
+          recipient_user_id: targetReply.user_id,  // reply author
+          sender_user_id: user.id,                 // liker
+          type: "like_reply",
+          metadata: {
+            reply_id: replyId,
+            review_id: parentReview.id,
+            school_id: schoolId // pass current schoolId from props
+          },
+          is_read: false,
+        }]);
+      }
     } else {
+      // Remove like
       await supabase.from("reply_likes").delete().match({ reply_id: replyId, user_id: user.id });
+
+      // Optionally: remove notification (if you want)
+      await supabase
+        .from("notifications")
+        .delete()
+        .match({
+          sender_user_id: user.id,
+          recipient_user_id: targetReply.user_id,
+          type: "like_reply",
+          "metadata->>reply_id": replyId,
+        });
     }
 
+    // Update local state
     setReviews((prev) =>
       prev.map((r) => ({
         ...r,
         replies: r.replies.map((rep) =>
-          rep.id === replyId ? { ...rep, liked: newLiked, likes: rep.likes + (newLiked ? 1 : -1) } : rep
+          rep.id === replyId
+            ? { ...rep, liked: newLiked, likes: rep.likes + (newLiked ? 1 : -1) }
+            : rep
         ),
       }))
     );
-  };
+  } catch (err) {
+    console.error("Error toggling reply like:", err);
+  }
+};
+
 
   // Send a reply
-  const handleSendReply = async (targetId: string, type: "review" | "reply", mentionName?: string) => {
+  const handleSendReply = async (targetId: string, type: "review" | "reply") => {
     if (!replyText.trim()) return;
     if (!user) return alert("Please log in to reply.");
 
     const fullName = profile?.full_name || user.email || "Anonymous";
 
+    // find the review id if replying to a reply
+    let reviewIdForPayload = "";
+    if (type === "review") {
+      reviewIdForPayload = targetId;
+    } else {
+      // find parent review that holds the reply
+      const parentReview = reviews.find((r) => r.replies.some((rep) => rep.id === targetId));
+      reviewIdForPayload = parentReview ? parentReview.id : "";
+    }
+
     const replyPayload = {
-      review_id: type === "review" ? targetId : reviews.find(r => r.replies.some(rep => rep.id === targetId))?.id,
+      review_id: reviewIdForPayload,
       user_id: user.id,
       username: fullName,
-      text: mentionName ? `@${mentionName} ${replyText.trim()}` : replyText.trim(),
+      text: replyText.trim(),
       parent_reply_id: type === "reply" ? targetId : null,
     };
 
-    const { data, error } = await supabase.from("review_replies").insert([replyPayload]).select();
-    if (error) return console.error("Reply insert error:", error.message);
+    try {
+      const { data, error } = await supabase.from("review_replies").insert([replyPayload]).select();
+      if (error) throw error;
 
-    const newReply = {
-      id: data![0].id,
-      username: fullName,
-      text: replyPayload.text,
-      created_at: data![0].created_at,
-      parent_reply_id: replyPayload.parent_reply_id,
-      likes: 0,
-      liked: false,
-    };
+      const newReply = {
+        id: data![0].id,
+        user_id: user.id,
+        username: fullName,
+        text: replyPayload.text,
+        created_at: data![0].created_at,
+        parent_reply_id: replyPayload.parent_reply_id,
+        likes: 0,
+        liked: false,
+      };
 
-    setReviews((prev) =>
-      prev.map((r) =>
-        r.id === replyPayload.review_id ? { ...r, replies: [...r.replies, newReply] } : r
-      )
-    );
-
-    setReplyText("");
-    setReplyingTo(null);
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === replyPayload.review_id ? { ...r, replies: [...r.replies, newReply] } : r
+        )
+      );
+    } catch (err) {
+      console.error("Reply insert error:", err);
+    } finally {
+      setReplyText("");
+      setReplyingTo(null);
+    }
   };
 
   // Submit a review
@@ -209,26 +291,32 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
     if (!userReview.trim() || userRating === 0) return alert("Add both text and rating.");
 
     const fullName = profile?.full_name || user.email || "Anonymous";
-    const { data, error } = await supabase
-      .from("reviews")
-      .insert([{ school_id: schoolId, user_id: user.id, username: fullName, rating: userRating, text: userReview }])
-      .select();
+    try {
+      const { data, error } = await supabase
+        .from("reviews")
+        .insert([{ school_id: schoolId, user_id: user.id, username: fullName, rating: userRating, text: userReview }])
+        .select();
 
-    if (error) return console.error("Review insert error:", error.message);
+      if (error) throw error;
 
-    const newReview: Review = {
-      id: data![0].id,
-      username: fullName,
-      rating: userRating,
-      text: userReview,
-      likes: 0,
-      liked: false,
-      replies: [],
-    };
+      const newReview: Review = {
+        id: data![0].id,
+        user_id: user.id,
+        username: fullName,
+        rating: userRating,
+        text: userReview,
+        likes: 0,
+        liked: false,
+        replies: [],
+        created_at: data![0].created_at,
+      };
 
-    setReviews([newReview, ...reviews]);
-    setUserReview("");
-    setUserRating(0);
+      setReviews([newReview, ...reviews]);
+      setUserReview("");
+      setUserRating(0);
+    } catch (err) {
+      console.error("Review insert error:", err);
+    }
   };
 
   return (
@@ -286,11 +374,13 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
         <p className="text-center text-gray-500">Loading reviews...</p>
       ) : (
         <div className="space-y-8">
+          <div> </div>
           {reviews.map((review) => (
-            <div key={review.id} className="bg-[#FDEDAA] rounded-3xl p-6 shadow-sm border border-yellow-100">
+            <div key={review.id} id={`review-${review.id}`} className="bg-[#FDEDAA] rounded-3xl p-6 shadow-sm border border-yellow-100">
               {/* Header */}
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <ProfileAvatar userId={review.user_id} username={review.username} size={35} />
                   <p className="font-semibold text-[17px] text-gray-900">{review.username}</p>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((s) => (
@@ -303,6 +393,7 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
                     ))}
                   </div>
                 </div>
+
               </div>
 
               {/* Text */}
@@ -333,7 +424,11 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
                 <div className="mt-4 ml-6 border-l-2 border-yellow-300 pl-4 space-y-3">
                   {review.replies.map((reply) => (
                     <div key={reply.id} className="bg-[#FFF7D8] rounded-2xl p-3 border border-yellow-100">
-                      <p className="font-semibold text-sm mb-1">{reply.username}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <ProfileAvatar userId={reply.user_id} username={reply.username} size={30} />
+                        <p className="font-semibold text-sm">{reply.username}</p>
+                      </div>
+
                       <p className="text-sm text-gray-600">{reply.text}</p>
                       <div className="flex items-center gap-6 mt-2">
                         <button onClick={() => handleLikeReply(reply.id)} className="flex items-center gap-1 hover:opacity-80 transition">
@@ -348,6 +443,7 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
                           )}
                           <span className="text-xs text-gray-600">{reply.likes}</span>
                         </button>
+                        <button onClick={() => setReplyingTo({ id: reply.id, type: "reply" })} className="text-sm text-gray-600 hover:opacity-80">Reply</button>
                       </div>
                     </div>
                   ))}
@@ -366,6 +462,23 @@ export default function ReviewSection({ schoolId, averageRating }: ReviewSection
                   />
                   <div className="mt-2 flex justify-end gap-2">
                     <button onClick={() => handleSendReply(review.id, "review")} className="px-4 py-1 bg-yellow-400 rounded-full font-semibold hover:bg-yellow-500">Send</button>
+                    <button onClick={() => setReplyingTo(null)} className="px-4 py-1 border border-gray-300 rounded-full hover:bg-gray-100">Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reply input for replying to a reply */}
+              {replyingTo?.type === "reply" && (
+                <div className="mt-3">
+                  <textarea
+                    className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-700 resize-none focus:ring-2 focus:ring-yellow-400"
+                    placeholder="Write a reply..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={2}
+                  />
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button onClick={() => handleSendReply(replyingTo.id, "reply")} className="px-4 py-1 bg-yellow-400 rounded-full font-semibold hover:bg-yellow-500">Send</button>
                     <button onClick={() => setReplyingTo(null)} className="px-4 py-1 border border-gray-300 rounded-full hover:bg-gray-100">Cancel</button>
                   </div>
                 </div>

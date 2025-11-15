@@ -162,7 +162,7 @@ export default function ProfilePage() {
     <div className="min-h-screen pb-12">
       <Navbar />
       
-      <div className="max-w-4xl mx-auto px-6 pt-24">
+      <div className="max-w-5xl mx-auto px-6 pt-24">
         
         {/* Profile Header - Yellow rounded rectangle */}
         <div 

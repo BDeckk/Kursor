@@ -52,7 +52,7 @@ export function TopUniversitiesCarousel({
           return (
             <CarouselItem key={index} className="basis-auto min-w-[230px] max-w-[230px]">
               <div
-                onClick={() => handleCardClick(uni.id)}
+                onClick={() => handleCardClick(uni.university_id)}
                 className="cursor-pointer bg-white rounded-xl py-6 px-4 shadow-lg flex flex-col justify-between text-center h-[370px] relative hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 {/* Like Button */}
