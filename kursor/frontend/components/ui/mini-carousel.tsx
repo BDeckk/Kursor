@@ -1,6 +1,8 @@
+// Updated MiniCarousel with onClick navigation and fixed end alignment
 "use client";
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FieldCard {
@@ -8,10 +10,11 @@ interface FieldCard {
   image: string;
   description?: string;
   color?: string;
-  imageWidth?: string; // Width in pixels
-  imageHeight?: string; // Height in pixels
-  imageTop?: string; // Top position (e.g., "16px", "-20px")
-  imageLeft?: string; // Left offset from center (e.g., "0px", "10px")
+  imageWidth?: string;
+  imageHeight?: string;
+  imageTop?: string;
+  imageLeft?: string;
+  link?: string;
 }
 
 interface MiniCarouselProps {
@@ -21,8 +24,8 @@ interface MiniCarouselProps {
 export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const carouselRef = useRef(null);
-  
-  // Show 4 cards at once like in the reference
+  const router = useRouter();
+
   const itemsPerView = 4;
   const totalItems = mini_card.length;
   const maxIndex = Math.max(0, totalItems - itemsPerView);
@@ -35,9 +38,28 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
     setCurrentIndex(prev => Math.max(prev - 1, 0));
   };
 
+  const handleCardClick = (field: FieldCard) => {
+    router.push(field.link || "/program-list");
+  };
+
+  // Calculate the transform to show the last card properly aligned
+  const getTransform = () => {
+    const cardWidth = 100 / totalItems; // Width of each card as percentage
+    const visibleWidth = itemsPerView * cardWidth; // Width of visible area
+    const totalWidth = 100; // Total width of all cards
+    
+    // Maximum translate to show last itemsPerView cards
+    const maxTranslate = totalWidth - visibleWidth;
+    const currentTranslate = currentIndex * cardWidth;
+    
+    // Use the smaller of the two to prevent over-scrolling
+    const actualTranslate = Math.min(currentTranslate, maxTranslate);
+    
+    return `translateX(-${actualTranslate}%)`;
+  };
+
   return (
     <div className="relative w-full mt-8">
-      {/* Navigation Buttons */}
       <button
         onClick={prevSlide}
         disabled={currentIndex === 0}
@@ -62,15 +84,13 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
         <ChevronRight size={24} className="text-gray-600" />
       </button>
 
-      {/* Carousel Container - Controls horizontal sliding */}
       <div className="px-[13%] relative">
-        {/* Mask container - only clips horizontally, not vertically */}
         <div className="relative pt-3 pb-7" style={{ overflow: 'hidden' }}> 
           <div
             ref={carouselRef}
             className="flex transition-transform duration-500 ease-in-out"
             style={{
-              transform: `translateX(-${currentIndex * 25}%)`,
+              transform: getTransform(),
               width: `${(totalItems / itemsPerView) * 100}%`
             }}
           >
@@ -80,12 +100,13 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
                 className="flex-shrink-0 px-3"
                 style={{ width: `${100 / totalItems}%` }}
               >
-                <div className="bg-[#FFDE59] rounded-2xl p-6 h-89 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group relative border-2 border-transparent hover:border-yellow-400" style={{ overflow: 'visible' }}>
-                  
-                  {/* White inner square - similar to dashboard cards */}
+                <div 
+                  className="bg-[#FFDE59] rounded-2xl p-6 h-89 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group relative border-2 border-transparent hover:border-yellow-400"
+                  style={{ overflow: 'visible' }}
+                  onClick={() => handleCardClick(field)}
+                >
                   <div className="absolute w-[220px] h-[220px] bg-white top-4 rounded-2xl flex items-center justify-center mx-auto overflow-hidden left-1/2 -translate-x-1/2 z-0"></div>
-                  
-                  {/* Icon/Image - absolutely positioned to pop out of the white square */}
+
                   <div 
                     className="absolute left-1/2 transform -translate-x-1/2 z-30"
                     style={{
@@ -101,15 +122,12 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
                       className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-xl"
                     />
                   </div>
-                  
-                  {/* Content section - positioned with more space from image */}
+
                   <div className="left-4 right-4 text-center flex flex-col items-center justify-center z-10 translate-y-58 transition-transform duration-300 group-hover:scale-104">
-                    {/* Title */}
                     <h3 className="text-[22px] font-bold text-gray-800 leading-tight mb-1 text-center w-full">
                       {field.title}
                     </h3>
-                    
-                    {/* Description */}
+
                     {field.description && (
                       <p className="text-sm text-gray-600 text-center w-full">
                         {field.description}
@@ -123,7 +141,6 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
         </div>
       </div>
 
-      {/* Dots Indicator - matching reference style */}
       <div className="flex justify-center mt-4 space-x-2">
         {Array.from({ length: maxIndex + 1 }, (_, index: number) => (
           <button
