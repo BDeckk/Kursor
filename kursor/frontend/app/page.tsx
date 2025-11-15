@@ -13,6 +13,20 @@ export default function HomePage() {
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
+  useEffect(() => {
+  const openLogin = () => setShowLoginModal(true);
+  const openSignup = () => setShowSignupModal(true);
+
+  window.addEventListener("openLogin", openLogin);
+  window.addEventListener("openSignup", openSignup);
+
+  return () => {
+    window.removeEventListener("openLogin", openLogin);
+    window.removeEventListener("openSignup", openSignup);
+  };
+}, []);
+
+
   const handleGetStarted = () => {
     setShowSignupModal(true);
   };

@@ -3,151 +3,115 @@ import { supabase } from "@/supabaseClient";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const geminiApiKey = process.env.GEMINI_API_KEY;
-if (!geminiApiKey) {
-  console.error("❌ GEMINI_API_KEY is missing");
-}
-
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
 
-interface School {
-  id: string;
-  uni_id: string;
-  name: string;
-  location?: string | null;
-  description?: string | null;
-  school_logo?: string | null;
+interface TopUniversity {
+  university_id: string; // matched to Supabase or temporary
+  schoolname: string;
+  image?: string | null;
+  rank: number;
+  reason?: string;
 }
 
-// Build Gemini prompt
-function buildPrompt(schools: School[]): string {
+function buildPrompt() {
   return `
-You are a university ranking assistant for the region of Cebu, Philippines.
-Below is a list of schools and universities in the area.
+You are an assistant that retrieves the **Top 10 universities in Cebu, Philippines** according to the latest information on the EduRank website (edurank.org).
 
-List of institutions:
-${schools
-  .map(
-    (s, i) =>
-      `${i + 1}. ${s.name} — Location: ${s.location ?? "N/A"}. ${s.description ?? ""}`
-  )
-  .join("\n")}
-
-Your task:
-- Based on global university ranking sources like EduRank, QS, and general academic reputation,
-- Identify the **Top 10 performing universities in Cebu**.
-- Rank them from 1 (highest) to 10 (lowest).
-- If any school is clearly not a university (e.g., high school, college branch), exclude it.
-- IMPORTANT: Only rank universities that appear in the list above. Do not add universities not in the list.
-
-Return ONLY a JSON array in this format:
+Return ONLY a valid JSON array in this format:
 [
-  { "rank": 1, "name": "University of Example", "reason": "Strong research output and reputation" },
+  { "rank": 1, "name": "University Name", "reason": "Short reason why it is ranked highly" },
   ...
 ]
 
-Return only the JSON array, no text before or after.
+Rules:
+- Include only universities in Cebu.
+- Rank them from 1 (highest) to 10 (lowest).
+- Return ONLY JSON, no extra text.
 `;
 }
 
-// Normalize strings for matching
-function normalize(str: string | null | undefined): string {
-  if (!str) return "";
-  return str.toLowerCase().trim().replace(/\s+/g, " ");
+function normalize(str?: string | null) {
+  return str ? str.toLowerCase().trim().replace(/\s+/g, " ") : "";
 }
 
 export async function GET() {
   try {
-    // Fetch all schools from Supabase
-    const { data, error } = await supabase.from("schools").select("*");
-    if (error) {
-      console.error("❌ Supabase error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    if (!data || data.length === 0) {
-      return NextResponse.json({ error: "No schools found in database" }, { status: 404 });
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+
+    // 1️⃣ Check Supabase for this month's top universities
+    const { data: existing, error } = await supabase
+      .from("top_universities")
+      .select("*")
+      .gte("created_at", firstDay)
+      .lt("created_at", nextMonth)
+      .order("rank", { ascending: true });
+
+    if (error) throw new Error(error.message);
+    if (existing && existing.length > 0) {
+      return NextResponse.json({ topUniversities: existing });
     }
 
-    const validSchools = data.filter((s) => s.name && s.name.trim() !== "");
-    if (validSchools.length === 0) {
-      return NextResponse.json(
-        { error: "No schools with valid names found" },
-        { status: 404 }
-      );
-    }
-
-    let geminiParsed: { rank: number; name: string; reason?: string }[] = [];
-
+    // 2️⃣ Call Gemini if no existing data
+    let geminiData: { rank: number; name: string; reason?: string }[] = [];
     if (genAI) {
       try {
-        console.log("🔨 Building prompt for Gemini...");
-        const prompt = buildPrompt(validSchools);
-
-        console.log("🤖 Calling Gemini API...");
+        const prompt = buildPrompt();
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
         const result = await model.generateContent(prompt);
         const text = result.response.text();
-
-        console.log("🧠 Gemini raw response:", text);
-
         const match = text.match(/\[[\s\S]*\]/);
-        if (match) {
-          geminiParsed = JSON.parse(match[0]);
-        } else {
-          console.warn("⚠️ Gemini did not return valid JSON. Returning empty array.");
-        }
-      } catch (geminiError) {
-        console.error("❌ Error calling Gemini API:", geminiError);
+        if (match) geminiData = JSON.parse(match[0]);
+      } catch (err) {
+        console.warn("Gemini API failed, using fallback:", err);
       }
     }
 
-    // Match Gemini results to Supabase schools
-    const matched = geminiParsed
-      .map((g) => {
-        const normalizedGeminiName = normalize(g.name);
+    // 3️⃣ Fallback
+    if (!geminiData || geminiData.length === 0) {
+      geminiData = [
+        { rank: 1, name: "University of San Carlos (USC – Talamban Campus)" },
+        { rank: 2, name: "University of the Philippines Cebu (UP Cebu)" },
+        { rank: 3, name: "Cebu Technological University (CTU)" },
+        { rank: 4, name: "University of Cebu (UC – Banilad Campus)" },
+        { rank: 5, name: "Cebu Normal University (CNU)" },
+        { rank: 6, name: "Southwestern University (SWU)" },
+        { rank: 7, name: "University of Southern Philippines Foundation (USPF)" },
+        { rank: 8, name: "Cebu Doctors' University (CDU)" },
+        { rank: 9, name: "University of Cebu Lapu-Lapu and Mandaue" },
+        { rank: 10, name: "Cebu Institute of Technology – University (CIT-U)" },
+      ];
+    }
 
-        const found = validSchools.find((s) => {
-          const normalizedSchoolName = normalize(s.name);
-          if (!normalizedGeminiName || !normalizedSchoolName) return false;
-          return (
-            normalizedSchoolName.includes(normalizedGeminiName) ||
-            normalizedGeminiName.includes(normalizedSchoolName)
-          );
-        });
-
-        if (!found) {
-          console.log(`⚠️ No match found for: ${g.name} - skipping`);
-          return null;
-        }
-
-        return {
-          id: found.id,
-          schoolname: found.name,
-          image: found.school_logo ?? null,
-          rank: g.rank,
-          reason: g.reason ?? "Highly reputable university in Cebu",
-        };
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
-
-    // Fallback: if Gemini failed, return top 10 valid schools from Supabase
-    const topUniversities =
-      matched.length > 0
-        ? matched.slice(0, 10)
-        : validSchools.slice(0, 10).map((s, i) => ({
-            id: s.id,
-            schoolname: s.name,
-            image: s.school_logo ?? null,
-            rank: i + 1,
-            reason: "Fallback university ranking",
-          }));
-
-    return NextResponse.json({
-      topUniversities,
-      raw: geminiParsed,
+    // 4️⃣ Map Gemini/fallback to Supabase schools
+    const { data: schools } = await supabase.from("schools").select("*");
+    const topUniversities: TopUniversity[] = geminiData.map((g, i) => {
+      const matched = schools?.find(s => normalize(s.name) === normalize(g.name));
+      return {
+        university_id: matched?.id ?? `no_id_${i + 1}`,
+        schoolname: matched?.name ?? g.name,
+        image: matched?.school_logo ?? null,
+        rank: g.rank,
+        reason: g.reason ?? "Highly reputable university in Cebu",
+      };
     });
-  } catch (err: unknown) {
-    console.error("❌ Error in top-universities API:", err);
-    const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+
+    // 5️⃣ Save into Supabase
+    await supabase.from("top_universities").insert(
+      topUniversities.map(u => ({
+        university_id: u.university_id,
+        schoolname: u.schoolname,
+        image: u.image,
+        rank: u.rank,
+        reason: u.reason,
+        created_at: new Date().toISOString(),
+      }))
+    );
+
+    return NextResponse.json({ topUniversities });
+  } catch (err: any) {
+    console.error("Error in /api/top-universities:", err);
+    return NextResponse.json({ error: err?.message ?? "Unknown error" }, { status: 500 });
   }
 }
