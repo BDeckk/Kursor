@@ -5,6 +5,7 @@ import { supabase } from "@/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Bell, Home, User } from "lucide-react";
 import { UserAuth } from "@/Context/AuthContext";
+import SettingsModal from "@/app/settings/page"; // Import your settings modal
 
 export default function Navbar() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Settings modal state
 
   // New state for redirect overlay
   const [notLoggedIn, setNotLoggedIn] = useState(false);
@@ -73,7 +75,12 @@ export default function Navbar() {
   };
 
   const handleProfile = () => router.push("/profile");
-  const handleSettings = () => router.push("/settings");
+  
+  const handleSettings = () => {
+    setDropdownOpen(false); // Close dropdown
+    setIsSettingsOpen(true); // Open settings modal
+  };
+  
   const handleHomeClick = () => router.push("/dashboard");
   const handleNotificationClick = () => console.log("Notifications clicked");
 
@@ -89,7 +96,7 @@ export default function Navbar() {
       {notLoggedIn && (
         <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[9999] text-center">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-            You’re not logged in
+            You're not logged in
           </h2>
           <p className="text-gray-600">Redirecting to website's landing page...</p>
 
@@ -184,6 +191,9 @@ export default function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* Settings Modal */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
 }
