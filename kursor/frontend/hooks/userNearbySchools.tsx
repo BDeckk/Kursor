@@ -1,4 +1,3 @@
-// useNearbySchools.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +8,7 @@ interface NearbySchool {
   rank: number;
   schoolname: string;
   image?: string | null;
+  available_courses?: string; // <-- include this
   distance?: string;
 }
 
@@ -57,36 +57,43 @@ export function useNearbySchools() {
         // get list of ids returned by RPC
         const ids = rpcData.map((s: any) => s.id).filter(Boolean);
 
-        // Fetch logos for those ids from your 'schools' table in batch
-        const { data: logosData, error: logosError } = await supabase
+        // Fetch logos AND available_courses for those ids from 'schools' table
+        const { data: schoolsData, error: schoolsError } = await supabase
           .from("schools")
-          .select("id, school_logo")
+          .select("id, school_logo, available_courses")
           .in("id", ids);
 
-        if (logosError) {
-          console.warn("Warning: failed to fetch logos:", logosError);
+        if (schoolsError) {
+          console.warn("Warning: failed to fetch school details:", schoolsError);
         }
 
-        // create id -> school_logo map
-        const logoMap = new Map<string | number, string | null>();
-        if (Array.isArray(logosData)) {
-          for (const row of logosData) {
-            logoMap.set(row.id, row.school_logo ?? null);
+        // create id -> school_logo & available_courses map
+        const schoolMap = new Map<number | string, { logo: string | null; courses?: string }>();
+        if (Array.isArray(schoolsData)) {
+          for (const row of schoolsData) {
+            schoolMap.set(row.id, {
+              logo: row.school_logo ?? null,
+              courses: row.available_courses ?? undefined,
+            });
           }
         }
 
-        // merge results
+        // merge results, preserving order
         const formatted: NearbySchool[] = rpcData.map((school: any, index: number) => {
-          const logoFromTable = logoMap.get(school.id) ?? null;
+          const schoolInfo = schoolMap.get(school.id) || { logo: null, courses: undefined };
           const logoFromRpc = school.school_logo ?? school.logo ?? null;
-          const image = logoFromTable || logoFromRpc || null;
+          const image = schoolInfo.logo || logoFromRpc || null;
 
           return {
             id: school.id ?? index,
             rank: index + 1,
             schoolname: school.name ?? school.schoolname ?? "Unknown",
             image,
-            distance: typeof school.distance_km === "number" ? school.distance_km.toFixed(2) : undefined,
+            available_courses: schoolInfo.courses,
+            distance:
+              typeof school.distance_km === "number"
+                ? school.distance_km.toFixed(2)
+                : undefined,
           };
         });
 
