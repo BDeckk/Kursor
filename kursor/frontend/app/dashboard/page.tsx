@@ -13,7 +13,7 @@ import Chatbot from "@/components/chatbot/page";
 export default function DashboardPage() {
   const router = useRouter();
   const { setIsLoading } = useGlobalLoading();
-  
+
   const [isVisible, setIsVisible] = useState(false);
   const [pageReady, setPageReady] = useState(false);
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
@@ -78,7 +78,6 @@ export default function DashboardPage() {
           return;
         }
 
-        // Compute average rating per school_id
         const ratingMap: Record<string, { total: number; count: number }> = {};
         reviewRows.forEach((row) => {
           const id = row.school_id;
@@ -93,17 +92,14 @@ export default function DashboardPage() {
           average: stats.total / stats.count,
         }));
 
-        // Sort descending by average rating
         averages.sort((a, b) => b.average - a.average);
 
-        // Take top 10
         const top10 = averages.slice(0, 10);
         if (top10.length === 0) {
           setTopReviews([]);
           return;
         }
 
-        // Fetch school metadata
         const schoolIds = top10.map((s) => s.school_id);
         const { data: schoolRows, error: schoolErr } = await supabase
           .from("schools")
@@ -112,7 +108,6 @@ export default function DashboardPage() {
 
         if (schoolErr) throw schoolErr;
 
-        // Merge results
         const merged = top10.map((entry, index) => {
           const school = schoolRows.find((s) => s.id === entry.school_id);
           return {
@@ -151,85 +146,30 @@ export default function DashboardPage() {
     }
   }, [statsLoading, reviewsLoading, setIsLoading]);
 
-  /* ------------------- Don't render until ready ------------------- */
   if (!pageReady) return null;
 
-  /* ------------------- STATIC CONTENT ------------------- */
   const slides = [
     { image: "/homepage_carousel/carousel3.png" },
     { image: "/homepage_carousel/carousel2.png" },
   ];
 
-  const fields = [
-    { 
-      title: "Engineering & Technology", 
-      image: "/homepage_carousel/engineer.svg", 
-      description: "Build the future with innovation", 
-      color: "bg-blue-50", 
-      imageWidth: "250px", 
-      imageHeight: "250px", 
+  const strands = ["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"];
+    const fields = strands.map(strand => ({
+      title: strand,
+      image: `/homepage_carousel/${strand}.svg`,  
+      description: `Explore programs for ${strand}`,
+      color: "bg-blue-50",
+      imageWidth: "250px",
+      imageHeight: "250px",
       imageTop: "4px",
-      link: "/program-list?field=Engineering & Technology"
-    },
-    { 
-      title: "Arts, Humanities & Design", 
-      image: "/homepage_carousel/artist.svg", 
-      description: "Express creativity and culture", 
-      color: "bg-purple-50", 
-      imageWidth: "230px", 
-      imageHeight: "230px", 
-      imageTop: "7px", 
-      imageLeft: "0px",
-      link: "/program-list?field=Arts, Humanities & Design"
-    },
-    { 
-      title: "Business & Management", 
-      image: "/homepage_carousel/finance.svg", 
-      description: "Lead and drive growth", 
-      color: "bg-green-50", 
-      imageWidth: "250px", 
-      imageHeight: "250px", 
-      imageTop: "6px", 
-      imageLeft: "3px",
-      link: "/program-list?field=Business & Management"
-    },
-    { 
-      title: "Law & Legal Studies", 
-      image: "/homepage_carousel/judge.svg", 
-      description: "Advocate for justice", 
-      color: "bg-red-50", 
-      imageWidth: "250px", 
-      imageHeight: "250px", 
-      imageTop: "8px",
-      link: "/program-list?field=Law & Legal Studies"
-    },
-    { 
-      title: "Health & Medical Sciences", 
-      image: "/homepage_carousel/doctor.svg", 
-      description: "Care for others' wellbeing", 
-      color: "bg-teal-50", 
-      imageWidth: "230px", 
-      imageHeight: "230px", 
-      imageTop: "22px",
-      link: "/program-list?field=Health & Medical Sciences"
-    },
-    { 
-      title: "Education & Social Work", 
-      image: "/homepage_carousel/Teacher.png", 
-      description: "Shape minds and communities", 
-      color: "bg-orange-50", 
-      imageWidth: "240px", 
-      imageHeight: "240px", 
-      imageTop: "16px",
-      link: "/program-list?field=Education & Social Work"
-    },
-  ];
+      link: `/strand-programs?strand=${encodeURIComponent(strand)}`
+    }));
+
 
   const handleAiClick = () => setIsChatbotOpen(true);
   const handleAssessmentClick = () => router.push("/assessment");
   const handleSchoolClick = () => router.push("/school");
 
-  /* ------------------- RENDER ------------------- */
   return (
     <>
       <div className="min-h-screen bg-white">
@@ -240,22 +180,17 @@ export default function DashboardPage() {
 
         <main className="pb-1">
           {/* Main Carousel */}
-          <div 
-            className={`mb-9 pl-[19%] pr-[19%] pt-[7%] transition-all duration-700 ease-out ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
-            }`}
-            style={{ transitionDelay: "100ms" }}
-          >
+          <div className={`mb-9 pl-[19%] pr-[19%] pt-[7%] transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
+          }`} style={{ transitionDelay: "100ms" }}>
             <HomeCards slides={slides} />
           </div>
 
-          {/* Feature Cards */}
-          <div 
-            className={`grid grid-cols-1 md:grid-cols-3 gap-8 pl-[15%] pr-[15%] transition-all duration-700 ease-out ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-            style={{ transitionDelay: "200ms" }}
-          >
+          {/* AI / Assessment / School Cards */}
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 pl-[15%] pr-[15%] transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`} style={{ transitionDelay: "200ms" }}>
+            {/* Seek guidance */}
             <button onClick={handleAiClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group w-full h-[400px] flex flex-col justify-between">
               <div className="relative flex justify-center items-center flex-grow">
                 <div className="absolute w-[220px] h-[220px] bg-[#FFDE59] rounded-[30px]"></div>
@@ -264,6 +199,7 @@ export default function DashboardPage() {
               <div className="mt-4"><h3 className="text-[25px] font-outfit font-bold text-black mb-2">Seek <span className="text-yellow-500">guidance</span></h3><p className="text-[25px] font-outfit font-bold text-black -mt-2">from our AI</p></div>
             </button>
 
+            {/* Find career */}
             <button onClick={handleAssessmentClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group w-full h-[400px] flex flex-col justify-between">
               <div className="relative flex justify-center items-center flex-grow">
                 <div className="absolute w-[220px] h-[220px] bg-[#FFDE59] rounded-[30px]"></div>
@@ -272,6 +208,7 @@ export default function DashboardPage() {
               <div className="mt-4"><h3 className="text-[25px] font-outfit font-bold text-black mb-2">Find the <span className="text-yellow-500">perfect</span></h3><p className="text-[25px] font-outfit font-bold text-black -mt-2">career path</p></div>
             </button>
 
+            {/* Browse schools */}
             <button onClick={handleSchoolClick} className="bg-white rounded-2xl p-8 shadow-lg border-2 border-transparent hover:border-yellow-600 cursor-pointer text-center relative group w-full h-[400px] flex flex-col justify-between">
               <div className="relative flex justify-center items-center flex-grow">
                 <div className="absolute w-[220px] h-[220px] bg-[#FFDE59] rounded-[30px]"></div>
@@ -282,12 +219,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Fields Carousel */}
-          <div 
-            className={`w-full pt-[5%] transition-all duration-700 ease-out ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-            style={{ transitionDelay: "300ms" }}
-          >
+          <div className={`w-full pt-[5%] transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`} style={{ transitionDelay: "300ms" }}>
             <div className="bg-[#FFDE59] py-12 w-full">
               <div className="px-[6%] mb-8">
                 <h2 className="text-3xl font-bold font-outfit text-gray-800">Fields that might <span className="text-white">interest you</span></h2>
@@ -297,42 +231,28 @@ export default function DashboardPage() {
           </div>
 
           {/* Top Statistics Carousel */}
-          <div 
-            className={`w-full pl-[6%] pr-[6%] pt-[2%] mt-5 transition-all duration-700 ease-out ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-            style={{ transitionDelay: "400ms" }}
-          >
+          <div className={`w-full pl-[6%] pr-[6%] pt-[2%] mt-5 transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`} style={{ transitionDelay: "400ms" }}>
             <div className="px-[6%] mb-8">
               <h2 className="text-3xl font-bold font-outfit text-gray-800 text-right pl-10">Top-Rated Schools <span className="text-[#FFDE59]">Based on Statistics</span></h2>
             </div>
-            {statsError ? (
-              <div className="text-center text-red-600">{statsError}</div>
-            ) : (
-              <SchoolCarousel school_card={topStatistics} />
-            )}
+            {statsError ? <div className="text-center text-red-600">{statsError}</div> : <SchoolCarousel school_card={topStatistics} />}
           </div>
 
           {/* Top Reviews Carousel */}
-          <div 
-            className={`w-full pt-[3%] py-12 w-full mt-20 mb-20 pb-[2%] transition-all duration-700 ease-out ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-            }`}
-            style={{ transitionDelay: "500ms" }}
-          >
+          <div className={`w-full pt-[3%] py-12 w-full mt-20 mb-20 pb-[2%] transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`} style={{ transitionDelay: "500ms" }}>
             <div className="px-[6%] mb-8">
               <h2 className="text-3xl font-bold font-outfit text-gray-800 mb-10 pl-10">Top-Rated Schools <span className="text-[#FFDE59]">Based on Student Reviews</span></h2>
             </div>
-            {reviewsError ? (
-              <div className="text-center text-red-600">{reviewsError}</div>
-            ) : (
-              <SchoolCarousel school_card={topReviews} />
-            )}
+            {reviewsError ? <div className="text-center text-red-600">{reviewsError}</div> : <SchoolCarousel school_card={topReviews} />}
           </div>
         </main>
       </div>
 
-      {/* Chatbot rendered outside main content - MOVED TO END */}
+      {/* Chatbot */}
       <Chatbot isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
     </>
   );
