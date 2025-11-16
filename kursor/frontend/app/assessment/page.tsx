@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { questions } from "./question";
 import Navbar from "@/components/homepage-navbar";
 import { useRouter } from "next/navigation";
+import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 
 type RIASEC = "R" | "I" | "A" | "S" | "E" | "C";
 
@@ -11,7 +12,9 @@ export default function AssessmentPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<{ [key: number]: number }>({});
   const [isVisible, setIsVisible] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
   const router = useRouter();
+  const { setIsLoading } = useGlobalLoading();
 
   //Resets assessment result and triggers animation
   useEffect(() => {
@@ -23,9 +26,16 @@ export default function AssessmentPage() {
     localStorage.removeItem("recommendations");
     localStorage.removeItem("hasGeneratedRecommendations");
 
-    // Trigger animation after component mounts
-    setTimeout(() => setIsVisible(true), 100);
-  }, []);
+    // Show loading, then show page
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setPageReady(true);
+      setIsLoading(false);
+      setTimeout(() => setIsVisible(true), 50);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [setIsLoading]);
 
   const handleAnswer = (questionId: number, value: number) => {
     setAnswers({ ...answers, [questionId]: value });
@@ -72,13 +82,17 @@ export default function AssessmentPage() {
     router.push('/result');
   };
 
+  if (!pageReady) return null;
+
   const progressPercentage = ((currentQuestion + 1) / questions.length) * 100;
   const currentQ = questions[currentQuestion];
 
   return (
     <div className="min-h-screen bg-white-100">
       {/* Navbar */}
-      <Navbar />
+      <div className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <Navbar />
+      </div>
       
       <div className="flex flex-col items-center justify-center px-6 pb-12 pt-30">
         {/* Assessment Title */}
@@ -86,6 +100,7 @@ export default function AssessmentPage() {
           className={`text-center mb-8 w-full max-w-4xl transition-all duration-700 ease-out ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
           }`}
+          style={{ transitionDelay: "100ms" }}
         >
           <h1 className="text-5xl font-bold text-black mb-6">
             ASSESSMENT <span style={{ color: '#FFDE59' }}>TEST</span>

@@ -17,9 +17,13 @@ const SUPABASE_STORAGE_URL =
 
 function resolveImageUrl(imagePath?: string | null) {
   if (!imagePath) return null;
-  if (/^https?:\/\//i.test(imagePath)) return imagePath;
-  const segments = imagePath.split("/").filter(Boolean);
-  return `${SUPABASE_STORAGE_URL}/${segments.map(encodeURIComponent).join("/")}`;
+  const trimmed = String(imagePath).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const segments = trimmed.split("/").filter(Boolean);
+  const encoded = segments.map((s) => encodeURIComponent(s)).join("/");
+  return `${SUPABASE_STORAGE_URL}/school_logos/${encoded}`;
 }
 
 function renderStars(rating: number) {
@@ -163,6 +167,9 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
           .delete()
           .eq("user_id", userId)
           .eq("school_id", schoolId);
+
+        // Remove from local state immediately when unliked
+        setSchools((prev) => prev.filter((s) => s.id !== idKey));
       }
     } catch (err) {
       console.error("Error toggling like:", err);
@@ -187,7 +194,7 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
             <CarouselItem key={idKey} className="basis-auto min-w-[230px] max-w-[230px]">
               <div
                 onClick={() => router.push(`/school-details/${school.id}`)}
-                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[360px]"
+                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[320px]"
               >
                 <LikeButton
                   userId={userId}
@@ -212,18 +219,13 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
                       </div>
                     )}
                   </div>
+                  <h3 className="text-base font-bold text-black mb-2 px-2 text-center">
+                    {school.schoolname}
+                  </h3>
+                </div>
 
-                  {/* Fixed height container for name + rating */}
-                  <div className="h-16 flex flex-col items-center justify-center">
-                    <h3 className="text-base font-bold text-black mb-1 px-2 text-center">
-                      {school.schoolname}
-                    </h3>
-                    <div className="flex items-center gap-1">
-                      {avgRating
-                        ? renderStars(avgRating)
-                        : <span className="text-gray-500 text-sm">No student reviews</span>}
-                    </div>
-                  </div>
+                <div className="w-full mt-auto flex items-center justify-center gap-1 border-t border-gray-100 mt-4 pt-3 pb-1">
+                  {avgRating ? renderStars(avgRating) : <span className="text-gray-500 text-sm">No student reviews</span>}
                 </div>
               </div>
             </CarouselItem>
@@ -231,8 +233,8 @@ export function LikedSchoolsCarousel({ userId }: { userId?: string }) {
         })}
       </CarouselContent>
 
-      <CarouselPrevious className="absolute top-1/2 -translate-y-1/2 left-2 text-gray-800 hover:text-yellow-500 z-10" />
-      <CarouselNext className="absolute top-1/2 -translate-y-1/2 right-2 text-gray-800 hover:text-yellow-500 z-10" />
+      <CarouselPrevious className="text-gray-800 hover:text-yellow-500 -left-20" />
+      <CarouselNext className="text-gray-800 hover:text-yellow-500 -right-20" />
     </Carousel>
   );
 }

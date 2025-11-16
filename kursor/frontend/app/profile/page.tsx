@@ -6,6 +6,7 @@ import { supabase } from "@/supabaseClient";
 import { Settings } from "lucide-react";
 import { LikedSchoolsCarousel } from "@/components/ui/liked-schools-carousel";
 import EditProfileModal from "@/components/profile/EditProfileModal";
+import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 
 interface Profile {
   id: string;
@@ -59,30 +60,38 @@ export default function ProfilePage() {
   const [schoolDetails, setSchoolDetails] = useState<SchoolDetails[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
+  
   const { session, getProfile } = UserAuth();
+  const { setIsLoading } = useGlobalLoading();
   const user = session?.user;
 
-  // Trigger entrance animation
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [riasecLoading, setRiasecLoading] = useState(true);
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
 
   // Load profile
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setProfileLoading(false);
+      return;
+    }
     const loadUserProfile = async () => {
       const data = await getProfile(user.id);
       if (data) {
         setProfileData(data);
       }
+      setProfileLoading(false);
     };
     loadUserProfile();
   }, [user, getProfile]);
 
   // Load latest RIASEC result
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setRiasecLoading(false);
+      return;
+    }
     const fetchRiasecResult = async () => {
       const { data, error } = await supabase
         .from("riasec_results")
@@ -97,6 +106,7 @@ export default function ProfilePage() {
       }
       
       setRiasecResult(data || null);
+      setRiasecLoading(false);
     };
     fetchRiasecResult();
   }, [user]);
@@ -117,13 +127,17 @@ export default function ProfilePage() {
 
   // Load liked schools
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setSchoolsLoading(false);
+      return;
+    }
     const fetchLikedSchools = async () => {
       const { data } = await supabase
         .from("school_likes")
         .select("*")
         .eq("user_id", user.id);
       setLikedSchools(data || []);
+      setSchoolsLoading(false);
     };
     fetchLikedSchools();
   }, [user]);
@@ -143,6 +157,22 @@ export default function ProfilePage() {
     fetchSchoolDetails();
   }, [likedSchools]);
 
+  // Wait for all data to be ready
+  useEffect(() => {
+    const dataReady = !profileLoading && !riasecLoading && !schoolsLoading;
+
+    if (profileLoading || riasecLoading || schoolsLoading) {
+      setIsLoading(true);
+    } else {
+      const timer = setTimeout(() => {
+        setPageReady(true);
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 50);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [profileLoading, riasecLoading, schoolsLoading, setIsLoading]);
+
   // Handle opening modal
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -158,9 +188,13 @@ export default function ProfilePage() {
     setProfileData(updatedProfile);
   };
 
+  if (!pageReady) return null;
+
   return (
     <div className="min-h-screen pb-12">
-      <Navbar />
+      <div className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <Navbar />
+      </div>
       
       <div className="max-w-5xl mx-auto px-6 pt-24">
         
@@ -169,6 +203,7 @@ export default function ProfilePage() {
           className={`bg-yellow-400 rounded-3xl px-8 py-6 flex items-center justify-between mb-15 shadow-sm transition-all duration-700 ease-out ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
           }`}
+          style={{ transitionDelay: "100ms" }}
         >
           <div className="flex items-center gap-5">
             <div className="w-20 h-20 bg-gray-300 rounded-full overflow-hidden">
@@ -203,7 +238,7 @@ export default function ProfilePage() {
           className={`bg-white rounded-3xl border-7 border-yellow-400 p-8 pl-25 mb-15 shadow-sm relative transition-all duration-700 ease-out ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
-          style={{ transitionDelay: "100ms" }}
+          style={{ transitionDelay: "200ms" }}
         >
           <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
             Personal Information
@@ -242,7 +277,7 @@ export default function ProfilePage() {
           className={`bg-white rounded-3xl border-7 border-yellow-400 p-12 mb-15 shadow-sm relative transition-all duration-700 ease-out ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
-          style={{ transitionDelay: "200ms" }}
+          style={{ transitionDelay: "300ms" }}
         >
           <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
             Assessment History
@@ -327,37 +362,40 @@ export default function ProfilePage() {
             </>
           )}
         </div>
+      </div>
 
-        {/* Liked Schools Section with Carousel */}
-        <div 
-          className={`bg-white rounded-3xl border-7 border-yellow-400 p-8 mb-15 shadow-sm relative transition-all duration-700 ease-out ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-          }`}
-          style={{ transitionDelay: "300ms" }}
-        >
-          <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
-            Liked Schools
-          </h2>
-          
-          <div className="pt-4">
-            {schoolDetails.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <svg className="w-20 h-20 text-yellow-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">
-                  You have no liked schools yet
-                </h3>
-                <p className="text-gray-600 font-fredoka">
-                  Browse schools and like the ones you're interested in to see them here.
-                </p>
-              </div>
-            ) : (
-              <LikedSchoolsCarousel userId={user?.id} />
-            )}
+      {/* Liked Schools Section - OUTSIDE max-w-5xl container for full width */}
+      <div 
+        className={`w-full px-6 transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        }`}
+        style={{ transitionDelay: "400ms" }}
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-3xl border-7 border-yellow-400 p-8 pr-30 pl-30 shadow-sm relative">
+            <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
+              Liked Schools
+            </h2>
+            
+            <div className="pt-4">
+              {schoolDetails.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <svg className="w-20 h-20 text-yellow-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">
+                    You have no liked schools yet
+                  </h3>
+                  <p className="text-gray-600 font-fredoka">
+                    Browse schools and like the ones you're interested in to see them here.
+                  </p>
+                </div>
+              ) : (
+                <LikedSchoolsCarousel userId={user?.id} />
+              )}
+            </div>
           </div>
         </div>
-
       </div>
 
       {/* Edit Profile Modal */}
