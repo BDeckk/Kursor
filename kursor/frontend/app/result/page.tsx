@@ -13,6 +13,7 @@ interface Recommendation {
   school?: string;
   reason: string;
   required_strand?: string;
+  program_id?: string | null;
 }
 
 interface Profile {
@@ -32,36 +33,23 @@ export default function ResultPage() {
   const [showResults, setShowResults] = useState(false);
   const [profileData, setProfileData] = useState<Profile | null>(null);
   const [hasGeneratedRecommendations, setHasGeneratedRecommendations] = useState(false);
-  const router = useRouter();
 
+  const router = useRouter();
   const { session, getProfile } = UserAuth();
   const user = session?.user;
 
-  const meanings: Record<RIASEC, string> = {
-    R: "Realistic",
-    I: "Investigative",
-    A: "Artistic",
-    S: "Social",
-    E: "Enterprising",
-    C: "Conventional",
-  };
+  const normalize = (str: string) => str.trim().toLowerCase();
 
-  // ----------------------------
-  // Strand Parsing & Mismatch Check
-  // ----------------------------
   const parseStrands = (strandText: string): string[] => {
     if (!strandText) return [];
     try {
       const parsed = JSON.parse(strandText);
       if (Array.isArray(parsed)) return parsed.map(s => s.toString().trim().toLowerCase());
     } catch {
-      // fallback if not JSON
       return strandText.split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
     }
     return [];
   };
-
-  const normalize = (str: string) => str.trim().toLowerCase();
 
   const isStrandMismatch = (program: Recommendation, userStrand: string) => {
     if (!program.required_strand || !userStrand) return false;
@@ -69,9 +57,7 @@ export default function ResultPage() {
     return requiredStrands.length > 0 && !requiredStrands.includes(normalize(userStrand));
   };
 
-  // ----------------------------
   // Load user profile
-  // ----------------------------
   useEffect(() => {
     if (!user?.id) return;
     const loadUserProfile = async () => {
@@ -81,9 +67,7 @@ export default function ResultPage() {
     loadUserProfile();
   }, [user, getProfile]);
 
-  // ----------------------------
   // Load cached scores and recommendations
-  // ----------------------------
   useEffect(() => {
     try {
       const storedScores = localStorage.getItem("scores");
@@ -108,9 +92,7 @@ export default function ResultPage() {
     }
   }, []);
 
-  // ----------------------------
-  // Fetch recommendations from API
-  // ----------------------------
+  // Fetch recommendations from API and save to Supabase
   useEffect(() => {
     if (!riasecCode) return;
     const alreadyGeneratedForCode = localStorage.getItem("generatedForCode") === riasecCode;
@@ -130,10 +112,25 @@ export default function ResultPage() {
         const data = await res.json();
 
         if (data.recommendations && Array.isArray(data.recommendations)) {
-          const enrichedRecs = data.recommendations.map((rec: any) => ({
-            ...rec,
-            required_strand: rec.required_strand || "",
-          }));
+          // Enrich recommendations with program_id from programs table
+          const enrichedRecs: Recommendation[] = await Promise.all(
+            data.recommendations.map(async (rec: any) => {
+              let program_id: string | null = null;
+              const { data: programData } = await supabase
+                .from("programs")
+                .select("id")
+                .ilike("title", rec.title)
+                .maybeSingle();
+
+              if (programData?.id) program_id = programData.id;
+
+              return {
+                ...rec,
+                required_strand: rec.required_strand || "",
+                program_id,
+              };
+            })
+          );
 
           setRecommendations(enrichedRecs);
           setHasGeneratedRecommendations(true);
@@ -169,6 +166,7 @@ export default function ResultPage() {
               school: rec.school || null,
               reason: rec.reason,
               required_strand: rec.required_strand || null,
+              program_id: rec.program_id || null,
             }));
 
             const { error: recError } = await supabase.from("riasec_recommendations").insert(topTen);
@@ -192,7 +190,8 @@ export default function ResultPage() {
     setShowResults(true);
     setTimeout(() => {
       const resultsSection = document.getElementById("start-section");
-      if (resultsSection) resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (resultsSection)
+        resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
   };
 
@@ -280,33 +279,34 @@ export default function ResultPage() {
                   </button>
                 </div>
               ) : recommendations.length > 0 ? (
-                <div className="space-y-4 pl-10 pr-10">
+                <div className="space-y-4 pl-10 pr-10 max-h-[600px] overflow-y-auto">
                   {recommendations.map((program, index) => (
                     <div
                       key={program.id || index}
                       onClick={() => {
-                        localStorage.setItem("selectedProgram", JSON.stringify(program));
-                        router.push(`/program-details?id=${program.id || index}`);
+                        if (program.program_id) {
+                          router.push(`/program-details?id=${program.program_id}`);
+                        }
                       }}
                       className="border-l-4 border-yellow-400 bg-yellow-50 p-5 rounded-r-lg hover:shadow-md transition cursor-pointer hover:bg-yellow-100 relative"
                     >
                       <div className="flex items-start justify-between">
-                        {/* Left: Index + Title + Warning */}
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-gray-800 font-bold">
                             {index + 1}
                           </div>
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1">
-                              <h3 className="font-bold text-lg text-gray-800 pr-1">{program.title}</h3>
+                              <h3 className="font-bold text-lg text-gray-800 pr-1 underline">
+                                {program.title}
+                              </h3>
                               {isStrandMismatch(program, profileData.strand) && (
                                 <div className="w-5 h-5 bg-[#E14434]/80 rounded-full flex items-center justify-center text-white text-xs group relative">
-                                         !
-                                    <div className="absolute left-full top-0 ml-2 w-64 p-2 text-sm text-white bg-[#ED3500] rounded opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                                      Your strand is not one of the required strands for this program. Bridging may be required.
-                                    </div>
+                                  !
+                                  <div className="absolute left-full top-0 ml-2 w-64 p-2 text-sm text-white bg-[#ED3500] rounded opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                    Your strand is not one of the required strands for this program. Bridging may be required.
                                   </div>
-
+                                </div>
                               )}
                             </div>
                             {program.school && (
@@ -315,8 +315,6 @@ export default function ResultPage() {
                             <p className="text-gray-700 text-sm leading-relaxed">{program.reason}</p>
                           </div>
                         </div>
-
-                        {/* Right: Arrow */}
                         <div className="text-gray-400 text-xl font-bold flex items-center">
                           →
                         </div>
