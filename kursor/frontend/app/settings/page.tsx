@@ -50,7 +50,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <div className={`fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${isAnimating ? 'opacity-100' : 'opacity-0'}`}>
       {/* Modal Container */}
-      <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto relative border-7 border-yellow-400 transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+      <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[100vh] overflow-y-auto relative border-7 border-yellow-400 transition-all duration-300 ${isAnimating ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
         
         {/* Close Button */}
         <button

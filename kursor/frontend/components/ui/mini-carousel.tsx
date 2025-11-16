@@ -1,4 +1,4 @@
-// Updated MiniCarousel with onClick navigation and fixed end alignment
+// Updated MiniCarousel with proportional image scaling
 "use client";
 
 import React, { useState, useRef } from 'react';
@@ -10,7 +10,6 @@ interface FieldCard {
   image: string;
   description?: string;
   color?: string;
-  imageWidth?: string;
   imageHeight?: string;
   imageTop?: string;
   imageLeft?: string;
@@ -59,7 +58,7 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
   };
 
   return (
-    <div className="relative w-full mt-8">
+    <div className="relative h mt-8">
       <button
         onClick={prevSlide}
         disabled={currentIndex === 0}
@@ -107,19 +106,23 @@ export const MiniCarousel = ({ mini_card }: MiniCarouselProps) => {
                 >
                   <div className="absolute w-[220px] h-[220px] bg-white top-4 rounded-2xl flex items-center justify-center mx-auto overflow-hidden left-1/2 -translate-x-1/2 z-0"></div>
 
+                  {/* Image container - NO width/height on container, only on img */}
                   <div 
-                    className="absolute left-1/2 transform -translate-x-1/2 z-30"
+                    className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30"
                     style={{
-                      width: field.imageWidth || '140px',
-                      height: field.imageHeight || '140px',
-                      top: field.imageTop || '-10px',
+                      marginTop: field.imageTop || '0px',
                       marginLeft: field.imageLeft || '0px'
                     }}
                   >
                     <img 
                       src={field.image} 
                       alt={field.title}
-                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-xl"
+                      className="object-contain transition-transform duration-300 group-hover:scale-110 drop-shadow-xl"
+                      style={{
+                        height: field.imageHeight || '200px',
+                        width: 'auto',
+                        maxWidth: 'none'
+                      }}
                     />
                   </div>
 
