@@ -212,7 +212,7 @@ export default function KursorProfileForm() {
             <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600">{formData.age || "Select birthdate to calculate"}</div>
           </div>
           <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
-          <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL","STEM","ABM","HUMSS","GAS","ICT","GA"]} />
+          <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
 
           <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
 
