@@ -72,15 +72,15 @@ export async function GET() {
     if (!geminiData || geminiData.length === 0) {
       geminiData = [
         { rank: 1, name: "University of San Carlos (USC – Talamban Campus)" },
-        { rank: 2, name: "University of the Philippines Cebu (UP Cebu)" },
-        { rank: 3, name: "Cebu Technological University (CTU)" },
-        { rank: 4, name: "University of Cebu (UC – Banilad Campus)" },
-        { rank: 5, name: "Cebu Normal University (CNU)" },
-        { rank: 6, name: "Southwestern University (SWU)" },
-        { rank: 7, name: "University of Southern Philippines Foundation (USPF)" },
-        { rank: 8, name: "Cebu Doctors' University (CDU)" },
-        { rank: 9, name: "University of Cebu Lapu-Lapu and Mandaue" },
-        { rank: 10, name: "Cebu Institute of Technology – University (CIT-U)" },
+        { rank: 2, name: "University of San Jose – Recoletos (USJ-R)" },
+        { rank: 3, name: "Cebu Normal University (CNU)" },
+        { rank: 4, name: "Southwestern University PHINMA" },
+        { rank: 5, name: "Cebu Institute of Medicine (CIM)" },
+        { rank: 6, name: "University of the Visayas (UV – Main Campus)" },
+        { rank: 7, name: "Cebu Institute of Technology – University (CIT-U)" },
+        { rank: 8, name: "University of Cebu (UC – Main Campus)" },
+        { rank: 9, name: "Cebu Technological University" },
+        { rank: 10, name: "University of Southern Philippines Foundation (USPF)" },
       ];
     }
 

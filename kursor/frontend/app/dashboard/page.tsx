@@ -413,7 +413,7 @@ const runSearch = useCallback(
 
         {/* Search Bar */}
         <div
-          className={`w-full px-[19%] pt-20 pb-4 transition-all duration-700 ease-out ${
+          className={`w-full px-[19%] pt-20 transition-all duration-700 ease-out ${
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
           }`}
           style={{ transitionDelay: "50ms", zIndex: 9999, position: "relative" }}

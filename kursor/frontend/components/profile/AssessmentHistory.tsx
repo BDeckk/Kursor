@@ -135,13 +135,20 @@ export default function AssessmentHistory({ userId }: { userId: string }) {
       <div className="py-10 text-center text-gray-700">
         <p className="font-bold text-xl">No assessment history yet</p>
         <p>Take an assessment to see your results here.</p>
+        <button
+          onClick={() => router.push("/assessment")}
+          className="mt-4 px-6 py-3 bg-yellow-300 text-white font-semibold rounded-xl shadow hover:bg-yellow-500 transition-colors duration-200"
+        >
+          Continue Assessment
+        </button>
       </div>
     );
 
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Dropdown Selector */}
-      <div className="w-full space-y-2">
+      <div className="w-full">
         <label className="block text-gray-800 font-semibold mb-2 font-outfit">
           Select Assessment
         </label>
