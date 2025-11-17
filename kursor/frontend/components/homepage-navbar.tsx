@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Bell, Home } from "lucide-react";
+import { Bell, Home, Search, X } from "lucide-react";
 import { UserAuth } from "@/Context/AuthContext";
 import SettingsModal from "@/app/settings/page";
 
@@ -16,6 +16,24 @@ type NotificationItem = {
   metadata: any;
   created_at: string;
 };
+
+type SchoolResult = {
+  type: "school";
+  id: string;
+  name: string;
+  school_logo: string;
+  location: string;
+};
+
+type ProgramResult = {
+  type: "program";
+  id: string;
+  program_name: string;
+  school_id?: string;
+  school_name: string;
+};
+
+type SearchResult = SchoolResult | ProgramResult;
 
 export default function Navbar() {
   const router = useRouter();
@@ -34,14 +52,23 @@ export default function Navbar() {
   const [schoolMap, setSchoolMap] = useState<Record<string, string>>({});
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
   const channelRef = useRef<any | null>(null);
   const pollingRef = useRef<any | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const debounceRef = useRef<number | null>(null);
+  const currentAbortRef = useRef<AbortController | null>(null);
 
-  // 🔵 FIXED: Normalize notification type
+  // Normalize notification type
   const normalizeType = (type: string = "") =>
     type.trim().toLowerCase().replace(/\s+/g, "_");
 
-  // 🔵 FIXED: Map message to actual types
+  // Map message to actual types
   const formatNotificationMessage = (type: string) => {
     const cleanType = normalizeType(type);
 
@@ -53,6 +80,141 @@ export default function Navbar() {
     };
 
     return map[cleanType] || "New activity on your content";
+  };
+
+  /* ----------------- Search Handler ----------------- */
+  const runSearch = useCallback(
+    async (query: string) => {
+      // Cancel previous in-flight request
+      if (currentAbortRef.current) {
+        try {
+          currentAbortRef.current.abort();
+        } catch (_) {}
+      }
+      const abort = new AbortController();
+      currentAbortRef.current = abort;
+
+      if (query.trim().length < 2) {
+        setSearchResults([]);
+        setIsSearching(false);
+        setShowResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      setShowResults(true);
+
+      try {
+        const sanitized = query.trim();
+        const ilikeTerm = `%${sanitized}%`;
+
+        // Search schools
+        const schoolPromise = supabase
+          .from("schools")
+          .select("id, name, school_logo, location")
+          .ilike("name", ilikeTerm)
+          .limit(6)
+          .abortSignal(abort.signal);
+
+        // Search programs
+        const programPromise = supabase
+          .from("programs")
+          .select("id, title")
+          .ilike("title", ilikeTerm)
+          .limit(6)
+          .abortSignal(abort.signal);
+
+        const [schoolRes, programRes] = await Promise.all([schoolPromise, programPromise]);
+
+        const { data: schools, error: schoolError } = schoolRes;
+        const { data: programs, error: programError } = programRes;
+
+        if (schoolError) {
+          console.error("School search error:", schoolError);
+        }
+        if (programError) {
+          console.error("Program search error:", programError);
+        }
+
+        // Normalize school results
+        const schoolResults: SchoolResult[] = (schools ?? []).map((s: any) => ({
+          type: "school",
+          id: String(s.id),
+          name: s.name ?? "Unnamed School",
+          school_logo: s.school_logo ?? "/temporary-school-logo/placeholder.png",
+          location: s.location ?? "",
+        }));
+
+        // Normalize program results
+        const programResults: ProgramResult[] = (programs ?? []).map((p: any) => ({
+          type: "program",
+          id: String(p.id),
+          program_name: p.title || "Unnamed Program",
+          school_name: "Program",
+        }));
+
+        setSearchResults([...schoolResults, ...programResults]);
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.error("Search error:", err);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    []
+  );
+
+  // Debounced effect for searchQuery
+  useEffect(() => {
+    if (debounceRef.current) {
+      window.clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = window.setTimeout(() => {
+      runSearch(searchQuery);
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) {
+        window.clearTimeout(debounceRef.current);
+      }
+    };
+  }, [searchQuery, runSearch]);
+
+  // Click outside to close search results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside, { passive: true });
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleResultClick = (result: SearchResult) => {
+    setShowResults(false);
+    setSearchQuery("");
+
+    if (result.type === "school") {
+      router.push(`/school-details/${result.id}`);
+    } else {
+      router.push(`/program-details?id=${result.id}`);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setShowResults(false);
+    if (currentAbortRef.current) {
+      try {
+        currentAbortRef.current.abort();
+      } catch (_) {}
+      currentAbortRef.current = null;
+    }
   };
 
   // AUTH CHECK
@@ -110,35 +272,31 @@ export default function Navbar() {
 
   // FETCH NOTIFICATIONS
   const fetchNotifications = async () => {
-  if (!user?.id) return;
-  try {
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("recipient_user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient_user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    if (error) throw error;
+      if (error) throw error;
 
-    let notifs = (data || []) as NotificationItem[];
+      let notifs = (data || []) as NotificationItem[];
+      notifs = notifs.filter(n => n.metadata?.school_id);
 
-    // Filter out notifications with invalid school_id
-    notifs = notifs.filter(n => n.metadata?.school_id);
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n) => !n.is_read).length);
 
-    setNotifications(notifs);
-    setUnreadCount(notifs.filter((n) => !n.is_read).length);
-
-    // fetch school names
-    const schoolIds = Array.from(
-      new Set(notifs.map((n) => n.metadata?.school_id))
-    );
-    schoolIds.forEach((id) => fetchSchoolName(id));
-  } catch (err) {
-    console.error("Error fetching notifications:", err);
-  }
-};
-
+      const schoolIds = Array.from(
+        new Set(notifs.map((n) => n.metadata?.school_id))
+      );
+      schoolIds.forEach((id) => fetchSchoolName(id));
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  };
 
   const fetchSchoolName = async (schoolId: string) => {
     if (!schoolId || schoolMap[schoolId]) return;
@@ -173,12 +331,10 @@ export default function Navbar() {
 
           if (ev === "INSERT") {
             const newRecord = payload.new;
-
             setNotifications((p) => [newRecord, ...p].slice(0, 50));
             if (!newRecord.is_read) setUnreadCount((c) => c + 1);
           } else if (ev === "UPDATE") {
             const newRecord = payload.new;
-
             setNotifications((prev) =>
               prev.map((n) => (n.id === newRecord.id ? newRecord : n))
             );
@@ -186,7 +342,6 @@ export default function Navbar() {
             setUnreadCount(totalUnread);
           } else if (ev === "DELETE") {
             const oldRecord = payload.old;
-
             setNotifications((prev) =>
               prev.filter((n) => n.id !== oldRecord.id)
             );
@@ -253,7 +408,6 @@ export default function Navbar() {
     router.push("/");
   };
 
-
   return (
     <>
       {notLoggedIn && (
@@ -268,6 +422,95 @@ export default function Navbar() {
       <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[3%] pl-[3%]">
         <div className="flex items-center">
           <img src="/Kursor.png" alt="Kursor logo" className="h-12 w-auto" />
+        </div>
+
+        {/* Search Bar - Center */}
+        <div className="flex-1 max-w-4xl mx-8 mt-2 relative" ref={searchRef}>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim().length >= 2 && setShowResults(true)}
+              placeholder="Search for schools or courses..."
+              className="w-full pl-12 pr-12 py-3 rounded-full border-2 border-gray-200 focus:border-yellow-500 focus:outline-none text-gray-700 font-outfit transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Search Results Dropdown */}
+          {showResults && searchQuery.trim().length >= 2 && (
+            <div className="absolute w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 max-h-96 overflow-y-auto z-[60]">
+              {isSearching ? (
+                <div className="p-6 text-center text-gray-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
+                  <p className="mt-2 font-outfit">Searching...</p>
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="py-2">
+                  {searchResults.map((result, index) => (
+                    <button
+                      key={`${result.type}-${result.id}-${index}`}
+                      onClick={() => handleResultClick(result)}
+                      className="w-full px-6 py-4 hover:bg-gray-50 flex items-start gap-4 text-left transition-colors"
+                    >
+                      {result.type === "school" ? (
+                        <>
+                          <img
+                            src={result.school_logo}
+                            alt={result.name}
+                            className="w-18 h-18 object-cover flex-shrink-0"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/temporary-school-logo/placeholder.png";
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                School
+                              </span>
+                            </div>
+                            <p className="font-semibold text-gray-900 font-outfit truncate">{result.name}</p>
+                            {result.location && <p className="text-sm text-gray-500 truncate">{result.location}</p>}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-18 h-18 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-2xl">📚</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
+                                Course
+                              </span>
+                            </div>
+                            <p className="font-semibold text-gray-900 font-outfit truncate">
+                              {result.program_name}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">{result.school_name}</p>
+                          </div>
+                        </>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  <p className="font-outfit">No results found for "{searchQuery}"</p>
+                  <p className="text-sm mt-1">Try searching with different keywords</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 pt-1">

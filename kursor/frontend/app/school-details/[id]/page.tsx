@@ -32,6 +32,7 @@ export default function SchoolDetailsPage() {
   const [school, setSchool] = useState<School | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageReady, setPageReady] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -71,11 +72,12 @@ export default function SchoolDetailsPage() {
     fetchSchoolDetails();
   }, [id]);
 
-  // Fetch reviews
+  // Fetch reviews - now with proper loading state
   useEffect(() => {
     if (!school) return;
 
     const fetchReviews = async () => {
+      setReviewsLoading(true);
       try {
         const { data, error } = await supabase
           .from("reviews")
@@ -86,6 +88,10 @@ export default function SchoolDetailsPage() {
         setReviews(data || []);
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
+        // Set empty array on error so page doesn't hang
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
       }
     };
 
@@ -109,12 +115,12 @@ export default function SchoolDetailsPage() {
     pictureImg.src = school.school_picture || "/placeholder-picture.png";
   }, [school]);
 
-  // Wait for all data to be ready
+  // Wait for all data to be ready INCLUDING reviews
   useEffect(() => {
     const imagesReady = school ? (logoLoaded && pictureLoaded) : false;
-    const dataReady = !loading && school !== null;
+    const dataReady = !loading && school !== null && !reviewsLoading;
 
-    if (loading || nearbyLoading || !dataReady || !imagesReady) {
+    if (loading || nearbyLoading || reviewsLoading || !dataReady || !imagesReady) {
       setIsLoading(true);
     } else {
       const t = setTimeout(() => {
@@ -124,7 +130,7 @@ export default function SchoolDetailsPage() {
       }, 500);
       return () => clearTimeout(t);
     }
-  }, [loading, nearbyLoading, school, logoLoaded, pictureLoaded, setIsLoading]);
+  }, [loading, nearbyLoading, reviewsLoading, school, logoLoaded, pictureLoaded, setIsLoading]);
 
   if (!pageReady) return null;
 
