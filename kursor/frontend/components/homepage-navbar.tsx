@@ -22,16 +22,13 @@ export default function Navbar() {
   const { session } = UserAuth();
   const user = session?.user;
 
-  // Profile
   const [profileData, setProfileData] = useState<any>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Other states
   const [notLoggedIn, setNotLoggedIn] = useState(false);
 
-  // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [schoolMap, setSchoolMap] = useState<Record<string, string>>({});
@@ -39,6 +36,24 @@ export default function Navbar() {
 
   const channelRef = useRef<any | null>(null);
   const pollingRef = useRef<any | null>(null);
+
+  // 🔵 FIXED: Normalize notification type
+  const normalizeType = (type: string = "") =>
+    type.trim().toLowerCase().replace(/\s+/g, "_");
+
+  // 🔵 FIXED: Map message to actual types
+  const formatNotificationMessage = (type: string) => {
+    const cleanType = normalizeType(type);
+
+    const map: Record<string, string> = {
+      reply: "Someone replied to your review",
+      like_review: "Someone liked your review",
+      reply_to_reply: "Someone replied to your reply",
+      like_reply: "Someone liked your reply",
+    };
+
+    return map[cleanType] || "New activity on your content";
+  };
 
   // AUTH CHECK
   useEffect(() => {
@@ -52,7 +67,7 @@ export default function Navbar() {
     checkAuth();
   }, [router]);
 
-  // FETCH PROFILE (FIXED)
+  // FETCH PROFILE
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user?.id) {
@@ -95,30 +110,35 @@ export default function Navbar() {
 
   // FETCH NOTIFICATIONS
   const fetchNotifications = async () => {
-    if (!user?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("recipient_user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
+  if (!user?.id) return;
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("recipient_user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      const notifs = (data || []) as NotificationItem[];
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter((n) => !n.is_read).length);
+    let notifs = (data || []) as NotificationItem[];
 
-      // Fetch school names
-      const schoolIds = Array.from(
-        new Set(notifs.map((n) => n.metadata?.school_id).filter(Boolean))
-      );
-      schoolIds.forEach((id) => fetchSchoolName(id));
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    }
-  };
+    // Filter out notifications with invalid school_id
+    notifs = notifs.filter(n => n.metadata?.school_id);
+
+    setNotifications(notifs);
+    setUnreadCount(notifs.filter((n) => !n.is_read).length);
+
+    // fetch school names
+    const schoolIds = Array.from(
+      new Set(notifs.map((n) => n.metadata?.school_id))
+    );
+    schoolIds.forEach((id) => fetchSchoolName(id));
+  } catch (err) {
+    console.error("Error fetching notifications:", err);
+  }
+};
+
 
   const fetchSchoolName = async (schoolId: string) => {
     if (!schoolId || schoolMap[schoolId]) return;
@@ -150,19 +170,23 @@ export default function Navbar() {
         { event: "*", schema: "public", table: "notifications" },
         (payload: any) => {
           const ev = payload.eventType || payload.event;
-          const newRecord = payload.new;
-          const oldRecord = payload.old;
 
           if (ev === "INSERT") {
+            const newRecord = payload.new;
+
             setNotifications((p) => [newRecord, ...p].slice(0, 50));
             if (!newRecord.is_read) setUnreadCount((c) => c + 1);
           } else if (ev === "UPDATE") {
+            const newRecord = payload.new;
+
             setNotifications((prev) =>
               prev.map((n) => (n.id === newRecord.id ? newRecord : n))
             );
             const totalUnread = notifications.filter((n) => !n.is_read).length;
             setUnreadCount(totalUnread);
           } else if (ev === "DELETE") {
+            const oldRecord = payload.old;
+
             setNotifications((prev) =>
               prev.filter((n) => n.id !== oldRecord.id)
             );
@@ -180,11 +204,7 @@ export default function Navbar() {
     };
   }, [user?.id]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
+  // MARK ALL AS READ
   const markAllAsRead = async () => {
     await supabase
       .from("notifications")
@@ -195,13 +215,32 @@ export default function Navbar() {
     setUnreadCount(0);
   };
 
+  // CLEAR ALL NOTIFICATIONS
+  const clearNotifications = async () => {
+    if (!user?.id) return;
+
+    await supabase
+      .from("notifications")
+      .delete()
+      .eq("recipient_user_id", user.id);
+
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  // CLICK NOTIFICATION
   const handleClickNotification = async (n: NotificationItem) => {
     if (!n.is_read) {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", n.id);
     }
 
-    if (n.metadata?.school_id && n.metadata?.review_id) {
-      router.push(`/school-details/${n.metadata.school_id}#review-${n.metadata.review_id}`);
+    if (n?.metadata?.school_id && n?.metadata?.review_id) {
+      router.push(
+        `/school-details/${n.metadata.school_id}#review-${n.metadata.review_id}`
+      );
     } else {
       router.push("/dashboard");
     }
@@ -209,28 +248,29 @@ export default function Navbar() {
     setNotifDropdownOpen(false);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
+
   return (
     <>
-      {/* NOT LOGGED IN OVERLAY */}
       {notLoggedIn && (
         <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[9999] text-center">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">
             You're not logged in
           </h2>
-          <p className="text-gray-600">
-            Redirecting to website's landing page...
-          </p>
+          <p className="text-gray-600">Redirecting to website's landing page...</p>
         </div>
       )}
 
-      {/* NAVBAR */}
       <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[3%] pl-[3%]">
         <div className="flex items-center">
           <img src="/Kursor.png" alt="Kursor logo" className="h-12 w-auto" />
         </div>
 
         <div className="flex items-center gap-4 pt-1">
-          {/* Home */}
           <button
             onClick={() => router.push("/dashboard")}
             className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
@@ -241,10 +281,10 @@ export default function Navbar() {
           {/* Notifications */}
           <div className="relative">
             <button
-              onClick={() =>
-                (setNotifDropdownOpen((o) => !o),
-                setProfileDropdownOpen(false))
-              }
+              onClick={() => (
+                setNotifDropdownOpen((o) => !o),
+                setProfileDropdownOpen(false)
+              )}
               className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center relative"
             >
               <Bell className="w-5 h-5 text-gray-700" />
@@ -255,17 +295,24 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Notifications Dropdown */}
             {notifDropdownOpen && (
               <div className="absolute right-0 mt-2 w-96 max-h-[420px] bg-white shadow-lg rounded-lg py-2 z-50">
                 <div className="flex justify-between px-4 py-2 border-b">
                   <h3 className="font-semibold">Notifications</h3>
-                  <button
-                    onClick={markAllAsRead}
-                    className="text-sm text-gray-500 hover:underline"
-                  >
-                    Mark all read
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-sm text-gray-500 hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                    <button
+                      onClick={clearNotifications}
+                      className="text-sm text-red-500 hover:underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
                 </div>
 
                 {notifications.length === 0 ? (
@@ -283,7 +330,9 @@ export default function Navbar() {
                         onClick={() => handleClickNotification(n)}
                       >
                         <div className="flex justify-between">
-                          <p className="text-sm">{n.type}</p>
+                          <p className="text-sm">
+                            {formatNotificationMessage(n.type)}
+                          </p>
                           <span className="text-xs text-gray-400">
                             {new Date(n.created_at).toLocaleString()}
                           </span>
@@ -309,9 +358,10 @@ export default function Navbar() {
           {/* Profile */}
           <div className="relative">
             <button
-              onClick={() =>
-                (setProfileDropdownOpen((o) => !o), setNotifDropdownOpen(false))
-              }
+              onClick={() => (
+                setProfileDropdownOpen((o) => !o),
+                setNotifDropdownOpen(false)
+              )}
               className="w-12 h-12 rounded-full bg-yellow-400 flex items-center justify-center text-black font-bold hover:bg-yellow-500 overflow-hidden"
             >
               {loadingProfile ? (
@@ -355,8 +405,10 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Settings Modal (unchanged) */}
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </>
   );
 }

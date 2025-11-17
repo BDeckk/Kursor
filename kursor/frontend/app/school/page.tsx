@@ -8,7 +8,7 @@ import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { supabase } from "@/supabaseClient";
 import { useState, useEffect } from "react";
 import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
-import { TopLikedSchoolsCarousel } from "@/components/TopLikeSchoolsCarousel";
+import TopLikedSchoolsCarousel from "@/components/TopLikeSchoolsCarousel";
 
 /* --- Simple Skeleton (used only if you later want it) --- */
 const SkeletonCarousel = () => (
