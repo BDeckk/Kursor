@@ -13,6 +13,17 @@ interface Program {
   description: string;
 }
 
+// Map strand names to their image filenames
+const STRAND_IMAGES: Record<string, string> = {
+  "STEM": "/homepage_carousel/STEM Background.jpg",
+  "HUMSS": "/homepage_carousel/HUMSS Background.png",
+  "ABM": "/homepage_carousel/ABM Background.webp",
+  "TVL-HE": "/homepage_carousel/TVL-HE Background.jpg",
+  "TVL-ICT": "/homepage_carousel/TVL-ICT Background.webp",
+  "GAS": "/homepage_carousel/GAS Background.jpg",
+  "Arts & Design": "/homepage_carousel/Arts and Design Background.jpg"
+};
+
 export default function StrandProgramsPage() {
   const searchParams = useSearchParams();
   const strand = searchParams.get("strand") || "";
@@ -79,6 +90,11 @@ export default function StrandProgramsPage() {
     router.push(`/program-details?id=${programId}`);
   };
 
+  // Get the image path for the current strand
+  const getStrandImage = () => {
+    return STRAND_IMAGES[strand] || "/homepage_carousel/default.jpg";
+  };
+
   if (!pageReady) return null;
 
   if (error) {
@@ -131,7 +147,7 @@ export default function StrandProgramsPage() {
 
         <div className="relative w-full h-[350px] md:h-[450px] overflow-hidden">
           <img
-            src={`/homepage_carousel/${strand}.svg`}
+            src={getStrandImage()}
             alt={`${strand} background`}
             className="w-full h-full object-cover"
           />

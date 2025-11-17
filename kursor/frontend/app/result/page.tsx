@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UserAuth } from "@/Context/AuthContext";
 import { supabase } from "@/supabaseClient";
+import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 
 type RIASEC = "R" | "I" | "A" | "S" | "E" | "C";
 
@@ -33,10 +34,14 @@ export default function ResultPage() {
   const [showResults, setShowResults] = useState(false);
   const [profileData, setProfileData] = useState<Profile | null>(null);
   const [hasGeneratedRecommendations, setHasGeneratedRecommendations] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [pageReady, setPageReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const router = useRouter();
   const { session, getProfile } = UserAuth();
   const user = session?.user;
+  const { setIsLoading } = useGlobalLoading();
 
   const normalize = (str: string) => str.trim().toLowerCase();
 
@@ -59,10 +64,15 @@ export default function ResultPage() {
 
   // Load user profile
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setProfileLoading(false);
+      return;
+    }
     const loadUserProfile = async () => {
+      setProfileLoading(true);
       const data = await getProfile(user.id);
       if (data) setProfileData(data);
+      setProfileLoading(false);
     };
     loadUserProfile();
   }, [user, getProfile]);
@@ -186,6 +196,22 @@ export default function ResultPage() {
     fetchRecommendations();
   }, [riasecCode, hasGeneratedRecommendations, scores, user]);
 
+  // Wait for all data to be ready before showing page
+  useEffect(() => {
+    const dataReady = !profileLoading && profileData !== null;
+
+    if (profileLoading || !dataReady) {
+      setIsLoading(true);
+    } else {
+      const t = setTimeout(() => {
+        setPageReady(true);
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 50);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [profileLoading, profileData, setIsLoading]);
+
   const handleSeeResults = () => {
     setShowResults(true);
     setTimeout(() => {
@@ -201,13 +227,26 @@ export default function ResultPage() {
     return "U";
   };
 
+  // Don't show content until everything is ready
+  if (!pageReady) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-white-100">
-      <Navbar />
+      {/* Navbar with fade-in */}
+      <div className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+        <Navbar />
+      </div>
 
       <div className="mx-auto pl-[17%] pr-[17%] pt-[9%]">
-        {/* Profile Section */}
-        <div className="bg-[#F5D555] p-7 rounded-3xl max-w justify-center">
+        {/* Profile Section with fade-in and slide-up */}
+        <div 
+          className={`bg-[#F5D555] p-7 rounded-3xl max-w justify-center transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+          }`}
+          style={{ transitionDelay: "200ms" }}
+        >
           <div className="bg-[#FFDE59] rounded-3xl p-8 border-4 border-white relative overflow-visible">
             <div className="flex items-center justify-between">
               <div className="flex-1 max-w-xl">
@@ -227,7 +266,7 @@ export default function ResultPage() {
               </div>
               <div className="relative pr-5">
                 <div className="w-85 h-85 rounded-full bg-gray-200 border-8 border-white shadow-xl overflow-hidden flex items-center justify-center">
-                  {loading ? (
+                  {profileLoading ? (
                     <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                   ) : profileData?.profile_image_url ? (
                     <img
@@ -247,13 +286,18 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* Results Section */}
+        {/* Results Section with staggered fade-in */}
         {showResults && profileData && (
           <div id="results-section">
             <div id="start-section" className="h-20" />
 
             {/* Recommendations Section */}
-            <div className="bg-white p-8">
+            <div 
+              className={`bg-white p-8 transition-all duration-700 ease-out ${
+                showResults ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+              }`}
+              style={{ transitionDelay: "300ms" }}
+            >
               <div className="flex items-center gap-4 mb-6">
                 <img src="/result-career.png" alt="Career Path" className="w-auto h-32" />
                 <h2 className="text-4xl font-bold text-gray-800">
@@ -288,7 +332,10 @@ export default function ResultPage() {
                           router.push(`/program-details?id=${program.program_id}`);
                         }
                       }}
-                      className="border-l-4 border-yellow-400 bg-yellow-50 p-5 rounded-r-lg hover:shadow-md transition cursor-pointer hover:bg-yellow-100 relative"
+                      className={`border-l-4 border-yellow-400 bg-yellow-50 p-5 rounded-r-lg hover:shadow-md transition-all cursor-pointer hover:bg-yellow-100 relative duration-500 ease-out ${
+                        showResults ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8"
+                      }`}
+                      style={{ transitionDelay: `${400 + index * 100}ms` }}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
