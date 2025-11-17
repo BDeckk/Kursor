@@ -1,111 +1,102 @@
 "use client";
 
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
-import { LikeButton } from "./likebutton";
-import { useSchoolLikes } from "@/hooks/useSchoolLikes";
 import { supabase } from "@/supabaseClient";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-
-const SUPABASE_STORAGE_URL =
-  "https://fiujlzfouidrxbechcxa.supabase.co/storage/v1/object/public";
-
-function resolveImageUrl(imagePath?: string | null) {
-  if (!imagePath) return null;
-  const trimmed = String(imagePath).trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const segments = trimmed.split("/").filter(Boolean);
-  const encoded = segments.map((s) => encodeURIComponent(s)).join("/");
-  return `${SUPABASE_STORAGE_URL}/${encoded}`;
-}
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useSchoolLikes } from "@/hooks/useSchoolLikes";
 
 interface School {
   id: string;
   schoolname: string;
   image?: string | null;
-  likes: number;
 }
 
-export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
+const SUPABASE_STORAGE_URL = "https://fiujlzfouidrxbechcxa.supabase.co/storage/v1/object/public";
+
+function resolveImageUrl(imagePath?: string | null) {
+  if (!imagePath) return null;
+  if (/^https?:\/\//i.test(imagePath)) return imagePath;
+  const segments = String(imagePath).trim().split("/").filter(Boolean);
+  return `${SUPABASE_STORAGE_URL}/${segments.map(encodeURIComponent).join("/")}`;
+}
+
+export default function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
   const router = useRouter();
-  const [schools, setSchools] = React.useState<School[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [failedImages, setFailedImages] = React.useState<Record<string, boolean>>({});
+  const [schools, setSchools] = useState<School[]>([]);
+  const [loadingSchools, setLoadingSchools] = useState(true);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
-  // Only for coloring the heart
-  const { likedSchools, toggleLike } = useSchoolLikes(userId);
+  const { likedSchools, likeCountMap, toggleLike, loading: loadingLikes } = useSchoolLikes(userId);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchSchools = async () => {
       try {
-        // 1️⃣ Fetch total likes per school using RPC
-        const { data: likeData, error: likeError } = await supabase.rpc(
-          "get_total_likes_per_school"
-        );
+        // Get all unique school IDs that have at least one like
+        const { data: likes, error } = await supabase
+          .from("school_likes")
+          .select("school_id");
+        
+        if (error) throw error;
 
-        if (likeError) throw likeError;
-        if (!likeData || likeData.length === 0) {
+        // Get unique school IDs
+        const schoolIds = [...new Set(likes?.map(row => String(row.school_id)) || [])];
+        
+        if (!schoolIds.length) {
           setSchools([]);
           return;
         }
 
-        const schoolIds = likeData.map((l: any) => l.school_id);
-
-        // 2️⃣ Fetch school details
-        const { data: schoolsData, error: schoolsError } = await supabase
+        // Fetch school details
+        const { data: schoolsData, error: schoolError } = await supabase
           .from("schools")
           .select("id, name, school_logo")
           .in("id", schoolIds);
+        
+        if (schoolError) throw schoolError;
 
-        if (schoolsError) throw schoolsError;
+        const schoolsList: School[] = (schoolsData ?? []).map((s) => ({
+          id: s.id,
+          schoolname: s.name,
+          image: s.school_logo,
+        }));
 
-        // 3️⃣ Merge school details with total likes
-        const merged: School[] = (schoolsData ?? [])
-          .map((s) => {
-            const likeRow = likeData.find((l: any) => l.school_id === s.id);
-            return {
-              id: s.id,
-              schoolname: s.name,
-              image: s.school_logo,
-              likes: Number(likeRow?.total_likes ?? 0),
-            };
-          })
-          .sort((a, b) => b.likes - a.likes); // sort descending
-
-        setSchools(merged);
+        setSchools(schoolsList);
       } catch (err) {
-        console.error("Error fetching top liked schools:", err);
+        console.error("Error fetching schools:", err);
       } finally {
-        setLoading(false);
+        setLoadingSchools(false);
       }
     };
 
     fetchSchools();
   }, []);
 
-  if (loading)
+  // Sort schools by like count whenever likeCountMap changes
+  const sortedSchools = React.useMemo(() => {
+    return [...schools].sort((a, b) => {
+      const likesA = likeCountMap[a.id] || 0;
+      const likesB = likeCountMap[b.id] || 0;
+      return likesB - likesA;
+    });
+  }, [schools, likeCountMap]);
+
+  if (loadingSchools || loadingLikes) {
     return <div className="text-center py-6">Loading top liked schools...</div>;
-  if (!schools.length)
-    return (
-      <div className="text-center py-6 text-gray-700">
-        No liked schools found.
-      </div>
-    );
+  }
+
+  if (!sortedSchools.length) {
+    return <div className="text-center py-6 text-gray-700">No liked schools found.</div>;
+  }
 
   return (
     <Carousel className="w-full relative overflow-visible">
       <CarouselContent className="gap-2 px-12">
-        {schools.map((school) => {
+        {sortedSchools.map((school) => {
           const idKey = String(school.id);
-          const isLiked = likedSchools[idKey];
+          const isLiked = likedSchools[idKey] || false;
+          const likes = likeCountMap[idKey] || 0;
           const imageUrl = resolveImageUrl(school.image);
 
           return (
@@ -114,13 +105,15 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                 onClick={() => router.push(`/school-details/${school.id}`)}
                 className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[320px]"
               >
-                <LikeButton
-                  userId={userId}
-                  schoolId={school.id}
-                  liked={isLiked}
-                  toggleLike={toggleLike}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleLike(school.id);
+                  }}
                   className="absolute top-4 right-4"
-                />
+                >
+                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                </button>
 
                 <div className="flex flex-col items-center justify-center flex-1">
                   <div className="w-32 h-32 flex items-center justify-center mb-4">
@@ -129,9 +122,7 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                         src={imageUrl}
                         alt={school.schoolname}
                         className="w-full h-full object-contain rounded-md"
-                        onError={() =>
-                          setFailedImages((prev) => ({ ...prev, [idKey]: true }))
-                        }
+                        onError={() => setFailedImages((prev) => ({ ...prev, [idKey]: true }))}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
@@ -139,19 +130,12 @@ export function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
                       </div>
                     )}
                   </div>
-
-                  <h3 className="text-base font-bold text-black mb-0 px-2 text-center">
-                    {school.schoolname}
-                  </h3>
+                  <h3 className="text-base font-bold text-black mb-0 px-2 text-center">{school.schoolname}</h3>
                 </div>
 
                 <div className="w-full mt-auto pt-4 flex items-center justify-center gap-2 text-sm">
-                  <Heart
-                    className={`w-4 h-4 ${
-                      isLiked ? "fill-red-500 text-red-500" : "text-gray-400"
-                    }`}
-                  />
-                  <span className="text-gray-700">{school.likes} likes</span>
+                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                  <span className="text-gray-700">{likes} {likes === 1 ? 'like' : 'likes'}</span>
                 </div>
               </div>
             </CarouselItem>
