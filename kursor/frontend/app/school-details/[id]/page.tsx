@@ -6,8 +6,9 @@ import Navbar from "@/components/homepage-navbar";
 import { supabase } from "@/supabaseClient";
 import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
-import ReviewSection from "@/components/reviews/SchoolReviews";
 import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
+import SchoolReviewsPage from "@/components/reviews/SchoolReviews";
+
 
 interface School {
   id: string;
@@ -282,15 +283,15 @@ export default function SchoolDetailsPage() {
 
       {/* Student Reviews */}
       <div className="pl-[10%] pr-[10%]">
-        <div
-          className={`transition-all duration-700 ease-out ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-          style={{ transitionDelay: "500ms" }}
-        >
-          <ReviewSection schoolId={school.id} averageRating={averageRating} />
+          <div
+            className={`transition-all duration-700 ease-out ${
+              isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
+            style={{ transitionDelay: "500ms" }}
+          >
+            <SchoolReviewsPage schoolId={school.id} />
+          </div>
         </div>
-      </div>
 
       {/* Nearby Schools */}
       <div
