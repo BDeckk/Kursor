@@ -116,7 +116,7 @@ export default function EditProfileModal({
 
     const payload = {
       id: userId,
-      email: editedProfile.email || null, // <- must provide value
+      email: editedProfile.email || null,
       full_name: editedProfile.full_name || null,
       profile_image_url: updatedImageUrl ?? null,
       gender:
@@ -132,18 +132,20 @@ export default function EditProfileModal({
       updated_at: new Date().toISOString(),
     };
 
-
-
     const { data, error } = await supabase.from("users").upsert(payload, {
       onConflict: "id",
     });
 
-    console.log({ data, error }); // <-- Debug: see exact error from Supabase
-
     if (error) throw error;
 
+    // Call onSave for any local updates
     onSave({ ...editedProfile, profile_image_url: updatedImageUrl });
+
+    // Close modal
     onClose();
+
+    // Refresh the page
+    window.location.reload();
   } catch (err) {
     console.error("Failed to save profile:", err);
     alert("Failed to save profile. Check RLS, DB constraints, or bucket permissions.");
@@ -151,6 +153,7 @@ export default function EditProfileModal({
     setIsSaving(false);
   }
 };
+
 
 
   return (
