@@ -15,29 +15,29 @@ export default function ProfileAvatar({ userId, username, size = 40 }: ProfileAv
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProfileImage = async () => {
-      if (!userId) return;
+  if (!userId) return;
 
-      // FIXED: Your table is "users", not "profiles"
-      const { data, error } = await supabase
-        .from("users")
-        .select("profile_image_url")
-        .eq("id", userId)
-        .maybeSingle();
+  const fetchProfileImage = async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("profile_image_url")
+      .eq("id", userId)
+      .limit(1)
+      .single();
 
-      if (error) {
-        console.error("Avatar fetch error:", error);
-        return;
-      }
+    if (error) {
+      console.error("Error fetching profile image:", error);
+      return;
+    }
 
-      if (data?.profile_image_url) {
-        // FIXED: profile_image_url is already a public URL
-        setImageUrl(data.profile_image_url);
-      }
-    };
+    if (data?.profile_image_url) {
+      setImageUrl(data.profile_image_url);
+    }
+  };
 
-    fetchProfileImage();
-  }, [userId]);
+  fetchProfileImage();
+}, [userId]);
+
 
   // Get initials for fallback avatar
   const initials = username ? username[0].toUpperCase() : "?";
