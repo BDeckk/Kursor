@@ -53,13 +53,16 @@ export default function SignupModal({ onClose }: SignupModalProps) {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/registration`,
-        },
-      });
+      const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/registration`;
+
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectTo,
+          },
+        });
+
 
       if (error) {
         if (
