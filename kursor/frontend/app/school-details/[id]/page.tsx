@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import SchoolDetailsPage from "./SchoolDetailsClient"; // adjust your path
+import SchoolDetailsPage from "@/components/SchoolDetailsClient";
 
 export default function Page() {
   return (
