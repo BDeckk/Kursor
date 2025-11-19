@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Heart } from "lucide-react";
 import { supabase } from "@/supabaseClient";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -23,7 +23,6 @@ function resolveImageUrl(imagePath?: string | null) {
 }
 
 export default function TopLikedSchoolsCarousel({ userId }: { userId?: string }) {
-  const router = useRouter();
   const [schools, setSchools] = useState<School[]>([]);
   const [loadingSchools, setLoadingSchools] = useState(true);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
@@ -33,27 +32,20 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        // Get all unique school IDs that have at least one like
-        const { data: likes, error } = await supabase
-          .from("school_likes")
-          .select("school_id");
-        
+        const { data: likes, error } = await supabase.from("school_likes").select("school_id");
         if (error) throw error;
 
-        // Get unique school IDs
         const schoolIds = [...new Set(likes?.map(row => String(row.school_id)) || [])];
-        
         if (!schoolIds.length) {
           setSchools([]);
           return;
         }
 
-        // Fetch school details
         const { data: schoolsData, error: schoolError } = await supabase
           .from("schools")
           .select("id, name, school_logo")
           .in("id", schoolIds);
-        
+
         if (schoolError) throw schoolError;
 
         const schoolsList: School[] = (schoolsData ?? []).map((s) => ({
@@ -73,7 +65,6 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
     fetchSchools();
   }, []);
 
-  // Sort schools by like count whenever likeCountMap changes
   const sortedSchools = React.useMemo(() => {
     return [...schools].sort((a, b) => {
       const likesA = likeCountMap[a.id] || 0;
@@ -82,13 +73,8 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
     });
   }, [schools, likeCountMap]);
 
-  if (loadingSchools || loadingLikes) {
-    return <div className="text-center py-6">Loading top liked schools...</div>;
-  }
-
-  if (!sortedSchools.length) {
-    return <div className="text-center py-6 text-gray-700">No liked schools found.</div>;
-  }
+  if (loadingSchools || loadingLikes) return <div className="text-center py-6">Loading top liked schools...</div>;
+  if (!sortedSchools.length) return <div className="text-center py-6 text-gray-700">No liked schools found.</div>;
 
   return (
     <Carousel className="w-full relative overflow-visible">
@@ -101,43 +87,42 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
 
           return (
             <CarouselItem key={idKey} className="basis-auto min-w-[230px] max-w-[230px]">
-              <div
-                onClick={() => router.push(`/school-details/${school.id}`)}
-                className="cursor-pointer bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[320px]"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleLike(school.id);
-                  }}
-                  className="absolute top-4 right-4"
-                >
-                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
-                </button>
+              <Link href={`/school-details/${school.id}`} className="cursor-pointer">
+                <div className="bg-white rounded-3xl shadow-lg flex flex-col items-center text-center relative hover:shadow-xl hover:scale-105 transition-all duration-300 px-3 py-6 h-[320px]">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLike(school.id);
+                    }}
+                    className="absolute top-4 right-4"
+                  >
+                    <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                  </button>
 
-                <div className="flex flex-col items-center justify-center flex-1">
-                  <div className="w-32 h-32 flex items-center justify-center mb-4">
-                    {imageUrl && !failedImages[idKey] ? (
-                      <img
-                        src={imageUrl}
-                        alt={school.schoolname}
-                        className="w-full h-full object-contain rounded-md"
-                        onError={() => setFailedImages((prev) => ({ ...prev, [idKey]: true }))}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
-                        No image
-                      </div>
-                    )}
+                  <div className="flex flex-col items-center justify-center flex-1">
+                    <div className="w-32 h-32 flex items-center justify-center mb-4">
+                      {imageUrl && !failedImages[idKey] ? (
+                        <img
+                          src={imageUrl}
+                          alt={school.schoolname}
+                          className="w-full h-full object-contain rounded-md"
+                          onError={() => setFailedImages((prev) => ({ ...prev, [idKey]: true }))}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-xl text-gray-400 text-sm">
+                          No image
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-black mb-0 px-2 text-center">{school.schoolname}</h3>
                   </div>
-                  <h3 className="text-base font-bold text-black mb-0 px-2 text-center">{school.schoolname}</h3>
-                </div>
 
-                <div className="w-full mt-auto pt-4 flex items-center justify-center gap-2 text-sm">
-                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
-                  <span className="text-gray-700">{likes} {likes === 1 ? 'like' : 'likes'}</span>
+                  <div className="w-full mt-auto pt-4 flex items-center justify-center gap-2 text-sm">
+                    <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                    <span className="text-gray-700">{likes} {likes === 1 ? 'like' : 'likes'}</span>
+                  </div>
                 </div>
-              </div>
+              </Link>
             </CarouselItem>
           );
         })}
