@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/supabaseClient";
 import { useRouter } from "next/navigation";
 
-export default function SignupModal({
-  onClose,
-}: {
+interface SignupModalProps {
   onClose: () => void;
-}) {
+}
+
+export default function SignupModal({ onClose }: SignupModalProps) {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -41,7 +41,7 @@ export default function SignupModal({
   }, []);
 
   const handleClose = () => {
-    if (alreadyLoggedIn) return; // prevent closing during redirect
+    if (alreadyLoggedIn) return;
     setIsVisible(false);
     setTimeout(onClose, 300);
   };
@@ -53,12 +53,11 @@ export default function SignupModal({
     setLoading(true);
 
     try {
-      // Attempt signup (Supabase will auto-check if email exists)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/registration/`,
+          emailRedirectTo: `${window.location.origin}/registration`,
         },
       });
 
@@ -74,7 +73,6 @@ export default function SignupModal({
         return;
       }
 
-      // Supabase returns user.identities = [] if email is already used
       if (data?.user && data.user.identities?.length === 0) {
         setError("This email is already registered. Please log in instead.");
         return;
@@ -97,14 +95,13 @@ export default function SignupModal({
       }`}
       onClick={handleClose}
     >
-      {/* Fullscreen "already logged in" overlay */}
+      {/* Already logged in overlay */}
       {alreadyLoggedIn && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-white p-10 text-center z-50">
           <h2 className="text-2xl font-semibold text-gray-800 mb-2">
             You're already logged in
           </h2>
           <p className="text-gray-600">Redirecting to your dashboard...</p>
-
           <div className="mt-6">
             <svg
               className="animate-spin h-7 w-7 text-[#FFDE59]"
@@ -130,7 +127,7 @@ export default function SignupModal({
         </div>
       )}
 
-      {/* Actual signup modal (hidden while redirecting) */}
+      {/* Signup modal */}
       {!alreadyLoggedIn && (
         <div
           className={`bg-white rounded-3xl shadow-2xl p-10 w-[440px] relative transition-all duration-300 ease-out ${
@@ -140,7 +137,7 @@ export default function SignupModal({
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close Button */}
+          {/* Close button */}
           <button
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
             onClick={handleClose}
@@ -242,25 +239,22 @@ export default function SignupModal({
           </div>
 
           {/* Login Link */}
-         <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            Already have an account?{" "}
-            <span
-              className="font-semibold hover:underline cursor-pointer"
-              style={{ color: "#FFDE59" }}
-              onClick={() => {
-                handleClose();           // Close signup modal
-                // Open login modal by calling parent's setter
-                const event = new CustomEvent("openLogin");
-                window.dispatchEvent(event);
-              }}
-            >
-              Log in
-            </span>
-          </p>
-        </div>
-
-
+          <div className="mt-6 text-center">
+            <p className="text-gray-600 text-sm">
+              Already have an account?{" "}
+              <span
+                className="font-semibold hover:underline cursor-pointer"
+                style={{ color: "#FFDE59" }}
+                onClick={() => {
+                  handleClose();
+                  const event = new CustomEvent("openLogin");
+                  window.dispatchEvent(event);
+                }}
+              >
+                Log in
+              </span>
+            </p>
+          </div>
         </div>
       )}
     </div>
