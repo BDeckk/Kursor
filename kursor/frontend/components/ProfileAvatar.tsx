@@ -15,29 +15,28 @@ export default function ProfileAvatar({ userId, username, size = 40 }: ProfileAv
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
-  if (!userId) return;
+    if (!userId) return;
 
-  const fetchProfileImage = async () => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("profile_image_url")
-      .eq("id", userId)
-      .limit(1)
-      .single();
+    const fetchProfileImage = async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("profile_image_url")
+        .eq("id", userId)
+        .limit(1)
+        .single();
 
-    if (error) {
-      console.error("Error fetching profile image:", error);
-      return;
-    }
+      if (error) {
+        console.error("Error fetching profile image:", error);
+        return;
+      }
 
-    if (data?.profile_image_url) {
-      setImageUrl(data.profile_image_url);
-    }
-  };
+      if (data?.profile_image_url) {
+        setImageUrl(data.profile_image_url);
+      }
+    };
 
-  fetchProfileImage();
-}, [userId]);
-
+    fetchProfileImage();
+  }, [userId]);
 
   // Get initials for fallback avatar
   const initials = username ? username[0].toUpperCase() : "?";
@@ -46,16 +45,27 @@ export default function ProfileAvatar({ userId, username, size = 40 }: ProfileAv
 
   return imageUrl ? (
     <img
-        src={imageUrl}
-        alt={username}
-        className="rounded-full object-cover flex-shrink-0"
-        width={size}
-        height={size}
-      />
+      src={imageUrl}
+      alt={username}
+      className="rounded-full object-cover flex-shrink-0"
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        minWidth: `${size}px`,
+        minHeight: `${size}px`,
+      }}
+    />
   ) : (
     <div
       className="rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
-      style={{ width: size, height: size, backgroundColor: color, fontSize }}
+      style={{ 
+        width: `${size}px`, 
+        height: `${size}px`, 
+        minWidth: `${size}px`,
+        minHeight: `${size}px`,
+        backgroundColor: color, 
+        fontSize: `${fontSize}px` 
+      }}
     >
       {initials}
     </div>
