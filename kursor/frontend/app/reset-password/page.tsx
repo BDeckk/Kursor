@@ -1,23 +1,29 @@
-    "use client";
+"use client";
 
-    import { useState } from "react";
-    import { useRouter } from "next/navigation";
-    import { supabase } from "@/supabaseClient";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/supabaseClient";
 
-    export default function ResetPasswordPage() {
-    const [password, setPassword] = useState("");
-    const [updated, setUpdated] = useState(false);
-    const [error, setError] = useState("");
-    const router = useRouter();
-    const [confirmPassword, setConfirmPassword] = useState("");
+export default function ResetPasswordPage() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updated, setUpdated] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true); // ✅ loading state
+  const router = useRouter();
 
+  useEffect(() => {
+    // Show loading for 5 seconds
+    const timer = setTimeout(() => setLoading(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
-    const handleUpdate = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     if (password !== confirmPassword) {
-        return setError("Passwords do not match.");
+      return setError("Passwords do not match.");
     }
 
     const { error } = await supabase.auth.updateUser({ password });
@@ -26,59 +32,69 @@
 
     setUpdated(true);
     setTimeout(() => router.push("/"), 1800);
-    };
+  };
 
-
+  if (loading) {
+    // ✅ loading screen JSX
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-        <div className="bg-white p-8 rounded-3xl shadow-xl w-[420px] text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Reset Password
-            </h1>
-
-            {updated ? (
-            <p className="text-green-600 font-medium">
-                ✅ Password updated! Redirecting…
-            </p>
-            ) : (
-            <form onSubmit={handleUpdate} className="space-y-5">
-                    {error && (
-                        <p className="text-red-500 bg-red-50 py-2 rounded-lg text-sm">
-                        {error}
-                        </p>
-                    )}
-
-                    <input
-                        type="password"
-                        placeholder="New password"
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                    />
-
-                    <input
-                        type="password"
-                        placeholder="Confirm password"
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        minLength={6}
-                    />
-
-                    <button
-                        type="submit"
-                        className="w-full py-3 rounded-xl font-semibold text-gray-800 shadow-md hover:shadow-lg"
-                        style={{ backgroundColor: "#FFDE59" }}
-                    >
-                        Update Password
-                    </button>
-                    </form>
-
-            )}
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-gray-900 mb-2">Loading...</p>
+          <div className="w-16 h-16 border-4 border-yellow-400 border-dashed rounded-full animate-spin mx-auto"></div>
         </div>
-        </div>
+      </div>
     );
-    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white p-8 rounded-3xl shadow-xl w-[420px] text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Reset Password
+        </h1>
+
+        {updated ? (
+          <p className="text-green-600 font-medium">
+            ✅ Password updated! Redirecting…
+          </p>
+        ) : (
+          <form onSubmit={handleUpdate} className="space-y-5">
+            {error && (
+              <p className="text-red-500 bg-red-50 py-2 rounded-lg text-sm">
+                {error}
+              </p>
+            )}
+
+            <input
+              type="password"
+              placeholder="New password"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+
+            <input
+              type="password"
+              placeholder="Confirm password"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl font-semibold text-gray-800 shadow-md hover:shadow-lg"
+              style={{ backgroundColor: "#FFDE59" }}
+            >
+              Update Password
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
