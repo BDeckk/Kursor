@@ -157,20 +157,7 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
               />
             </div>
 
-            {/* ✅ Show only after failed login */}
-            {error && (
-              <div className="text-right text-sm">
-                <button
-                  className="text-gray-600 hover:underline"
-                  onClick={() => {
-                    handleClose();
-                    router.push("/forgot-password");
-                  }}
-                >
-                  Forgot password?
-                </button>
-              </div>
-            )}
+           
 
             <button
               type="submit"
@@ -180,8 +167,24 @@ export default function LoginModal({ onClose }: { onClose: () => void }) {
             >
               {loading ? "Logging in..." : "Log In"}
             </button>
+
+             {/* ✅ Show only after failed login */}
+                    {error && (
+                      <div className="text-right text-sm">
+                        <button
+                          className="text-gray-600 hover:underline cebter"
+                          onClick={() => {
+                            handleClose();
+                            router.push("/forgot-password");
+                          }}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                    )}
           </form>
 
+       
           <div className="mt-6 text-center text-sm">
             <p className="text-gray-600">
               Don't have an account?{" "}
