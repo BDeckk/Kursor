@@ -47,7 +47,7 @@ export default function KursorProfileForm() {
 
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
-    email: "",
+    email: user?.email || "",
     birthdate: "",
     gender: "",
     address: "",
@@ -75,6 +75,13 @@ export default function KursorProfileForm() {
 
     checkUserExistence();
   }, [user, router]);
+
+  useEffect(() => {
+    if (user?.email) {
+      setFormData(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user]);
+
 
   // Calculate age
   const calculateAge = (birthdate: string): string => {
