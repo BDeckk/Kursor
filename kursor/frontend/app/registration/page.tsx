@@ -124,24 +124,43 @@ export default function KursorProfileForm() {
     );
   };
 
+  // Validation helper
+  const validateForm = (): { valid: boolean; message?: string } => {
+    const requiredFields: (keyof FormData)[] = [
+      "full_name",
+      "email",
+      "birthdate",
+      "gender",
+      "strand",
+      "age",
+      "address",
+      "latitude",
+      "longitude",
+    ];
+
+    for (const field of requiredFields) {
+      if (!formData[field]) {
+        return { valid: false, message: `${field.replace("_", " ")} is required.` };
+      }
+    }
+
+    const age = parseInt(formData.age);
+    if (isNaN(age) || age < 13) {
+      return { valid: false, message: "You must be at least 13 years old to register." };
+    }
+
+    return { valid: true };
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       setError("No authenticated user found.");
       return;
     }
 
-    // Validate required fields
-    const requiredFields = ["full_name", "email", "birthdate", "gender", "strand", "age", "address", "latitude", "longitude"];
-    for (const field of requiredFields) {
-      if (!formData[field as keyof FormData]) {
-        setError("Please fill in all required fields and set your location using GPS.");
-        return;
-      }
-    }
-
-    const age = parseInt(formData.age);
-    if (age < 13) {
-      setError("You must be at least 13 years old to register.");
+    const validation = validateForm();
+    if (!validation.valid) {
+      setError(validation.message || "Please fill in all required fields.");
       return;
     }
 
@@ -243,7 +262,6 @@ export default function KursorProfileForm() {
           <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
           <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
 
-          {/* Latitude / Longitude side by side with GPS button */}
           <div className="flex items-center space-x-2">
             <InputField label="Latitude *" name="latitude" value={formData.latitude} readOnly />
             <InputField label="Longitude *" name="longitude" value={formData.longitude} readOnly />
