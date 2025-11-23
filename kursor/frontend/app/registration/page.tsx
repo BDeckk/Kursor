@@ -60,16 +60,15 @@ export default function KursorProfileForm() {
   // Check if user already exists
   useEffect(() => {
     if (!user?.id) return;
-
     if (typeof window !== "undefined" && window.location.pathname.includes("reset-password")) return;
 
     const checkUserExistence = async () => {
       try {
         const exist = await isUserExist(user.id);
         if (exist.success) router.replace("/dashboard");
-        else setIsLoading(false); // Stop loading if no existing profile
+        else setIsLoading(false);
       } catch (err) {
-        console.error(err);
+        console.error("Error checking user existence:", err);
         setIsLoading(false);
       }
     };
@@ -90,18 +89,23 @@ export default function KursorProfileForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === "birthdate") {
-      setFormData((prev) => ({ ...prev, [name]: value, age: calculateAge(value) }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+    try {
+      if (name === "birthdate") {
+        setFormData((prev) => ({ ...prev, [name]: value, age: calculateAge(value) }));
+      } else {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+      }
+      setSuccess("");
+      setError("");
+    } catch (err) {
+      console.error(`Error handling change for field ${name}:`, err);
     }
-    setSuccess("");
-    setError("");
   };
 
   // Set latitude and longitude using GPS
   const setLocation = () => {
     if (!navigator.geolocation) {
+      console.error("GPS not supported");
       setLocationStatus("❌ GPS not supported on this browser.");
       return;
     }
@@ -126,34 +130,42 @@ export default function KursorProfileForm() {
 
   // Validation helper
   const validateForm = (): { valid: boolean; message?: string } => {
-    const requiredFields: (keyof FormData)[] = [
-      "full_name",
-      "email",
-      "birthdate",
-      "gender",
-      "strand",
-      "age",
-      "address",
-      "latitude",
-      "longitude",
-    ];
+    try {
+      const requiredFields: (keyof FormData)[] = [
+        "full_name",
+        "email",
+        "birthdate",
+        "gender",
+        "strand",
+        "age",
+        "address",
+        "latitude",
+        "longitude",
+      ];
 
-    for (const field of requiredFields) {
-      if (!formData[field]) {
-        return { valid: false, message: `${field.replace("_", " ")} is required.` };
+      for (const field of requiredFields) {
+        if (!formData[field]) {
+          console.error(`Validation error: ${field} is required.`);
+          return { valid: false, message: `${field.replace("_", " ")} is required.` };
+        }
       }
-    }
 
-    const age = parseInt(formData.age);
-    if (isNaN(age) || age < 13) {
-      return { valid: false, message: "You must be at least 13 years old to register." };
-    }
+      const age = parseInt(formData.age);
+      if (isNaN(age) || age < 13) {
+        console.error("Validation error: age must be at least 13");
+        return { valid: false, message: "You must be at least 13 years old to register." };
+      }
 
-    return { valid: true };
+      return { valid: true };
+    } catch (err) {
+      console.error("Error during validation:", err);
+      return { valid: false, message: "Unexpected validation error." };
+    }
   };
 
   const handleSubmit = async () => {
     if (!user) {
+      console.error("No authenticated user found");
       setError("No authenticated user found.");
       return;
     }
@@ -169,6 +181,7 @@ export default function KursorProfileForm() {
     try {
       const use_result = await isUserExist(user.id);
       if (use_result.success) {
+        console.error("User already exists");
         setError("You already have a profile. Redirecting...");
         setTimeout(() => router.replace("/dashboard"), 1500);
         return;
@@ -190,9 +203,11 @@ export default function KursorProfileForm() {
 
       const result = await insertUser(userData);
       if (result.success) {
+        console.log("User profile created successfully!");
         setSuccess("User profile created successfully!");
         router.push("/dashboard");
       } else {
+        console.error("InsertUser failed:", result);
         setError("Error creating profile. Please try again.");
       }
     } catch (err) {
@@ -205,7 +220,6 @@ export default function KursorProfileForm() {
   };
 
   if (isLoading) {
-    // Full-page loading screen
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
@@ -233,7 +247,7 @@ export default function KursorProfileForm() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Left side illustration */}
+      {/* Left illustration */}
       <div className="w-[55%] flex flex-col">
         <header className="flex justify-between items-center h-20 fixed left-0 w-full z-50 bg-gradient-to-b from-white to-white/85 pr-[2%]">
           <div className="flex items-center pl-7">
@@ -287,7 +301,7 @@ export default function KursorProfileForm() {
   );
 }
 
-// InputField
+// InputField component
 function InputField({ label, name, value, onChange, type="text", placeholder="", readOnly=false }: InputFieldProps) {
   const isRequired = label.includes('*');
   return (
@@ -308,7 +322,7 @@ function InputField({ label, name, value, onChange, type="text", placeholder="",
   );
 }
 
-// SelectField
+// SelectField component
 function SelectField({ label, name, value, onChange, options }: SelectFieldProps) {
   const isRequired = label.includes('*');
   return (
