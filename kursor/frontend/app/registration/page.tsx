@@ -58,18 +58,25 @@ export default function KursorProfileForm() {
 
   // Check if user already exists
   useEffect(() => {
-    const checkUserExistence = async () => {
-      if (!user?.id) return;
-      try {
-        const exist = await isUserExist(user.id);
-        if (exist.success) router.replace("/dashboard");
-        else setFormData((prev) => ({ ...prev, email: user.email || "" }));
-      } catch (err) {
-        console.error("Error checking user existence:", err);
-      }
-    };
-    checkUserExistence();
-  }, [user, isUserExist, router]);
+  if (!user?.id) return;
+
+  // ✅ Prevent redirect while user is resetting password
+  if (typeof window !== "undefined" && window.location.pathname.includes("reset-password")) {
+    return;
+  }
+
+  const checkUserExistence = async () => {
+    try {
+      const exist = await isUserExist(user.id);
+      if (exist.success) router.replace("/dashboard");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  checkUserExistence();
+}, [user, router]);
+
 
   // Calculate age
   const calculateAge = (birthdate: string): string => {

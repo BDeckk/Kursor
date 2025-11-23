@@ -9,18 +9,25 @@ export default function ResetPasswordPage() {
   const [updated, setUpdated] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const [confirmPassword, setConfirmPassword] = useState("");
+
 
   const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError("");
 
-    const { error } = await supabase.auth.updateUser({ password });
+  if (password !== confirmPassword) {
+    return setError("Passwords do not match.");
+  }
 
-    if (error) return setError(error.message);
+  const { error } = await supabase.auth.updateUser({ password });
 
-    setUpdated(true);
-    setTimeout(() => router.push("/"), 1800);
-  };
+  if (error) return setError(error.message);
+
+  setUpdated(true);
+  setTimeout(() => router.push("/"), 1800);
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
@@ -35,30 +42,41 @@ export default function ResetPasswordPage() {
           </p>
         ) : (
           <form onSubmit={handleUpdate} className="space-y-5">
-            {error && (
-              <p className="text-red-500 bg-red-50 py-2 rounded-lg text-sm">
-                {error}
-              </p>
-            )}
+                {error && (
+                    <p className="text-red-500 bg-red-50 py-2 rounded-lg text-sm">
+                    {error}
+                    </p>
+                )}
 
-            <input
-              type="password"
-              placeholder="New password"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
+                <input
+                    type="password"
+                    placeholder="New password"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                />
 
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl font-semibold text-gray-800 shadow-md hover:shadow-lg"
-              style={{ backgroundColor: "#FFDE59" }}
-            >
-              Update Password
-            </button>
-          </form>
+                <input
+                    type="password"
+                    placeholder="Confirm password"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#FFDE59]"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                />
+
+                <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl font-semibold text-gray-800 shadow-md hover:shadow-lg"
+                    style={{ backgroundColor: "#FFDE59" }}
+                >
+                    Update Password
+                </button>
+                </form>
+
         )}
       </div>
     </div>
