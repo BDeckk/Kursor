@@ -42,6 +42,7 @@ export default function KursorProfileForm() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [locationStatus, setLocationStatus] = useState("");
 
   const [formData, setFormData] = useState<FormData>({
@@ -58,25 +59,23 @@ export default function KursorProfileForm() {
 
   // Check if user already exists
   useEffect(() => {
-  if (!user?.id) return;
+    if (!user?.id) return;
 
-  // ✅ Prevent redirect while user is resetting password
-  if (typeof window !== "undefined" && window.location.pathname.includes("reset-password")) {
-    return;
-  }
+    if (typeof window !== "undefined" && window.location.pathname.includes("reset-password")) return;
 
-  const checkUserExistence = async () => {
-    try {
-      const exist = await isUserExist(user.id);
-      if (exist.success) router.replace("/dashboard");
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    const checkUserExistence = async () => {
+      try {
+        const exist = await isUserExist(user.id);
+        if (exist.success) router.replace("/dashboard");
+        else setIsLoading(false); // Stop loading if no existing profile
+      } catch (err) {
+        console.error(err);
+        setIsLoading(false);
+      }
+    };
 
-  checkUserExistence();
-}, [user, router]);
-
+    checkUserExistence();
+  }, [user, router]);
 
   // Calculate age
   const calculateAge = (birthdate: string): string => {
@@ -132,19 +131,12 @@ export default function KursorProfileForm() {
     }
 
     // Validate required fields
-    if (
-      !formData.full_name ||
-      !formData.email ||
-      !formData.birthdate ||
-      !formData.gender ||
-      !formData.strand ||
-      !formData.age ||
-      !formData.address ||
-      !formData.latitude ||
-      !formData.longitude
-    ) {
-      setError("Please fill in all required fields and set your location using GPS.");
-      return;
+    const requiredFields = ["full_name", "email", "birthdate", "gender", "strand", "age", "address", "latitude", "longitude"];
+    for (const field of requiredFields) {
+      if (!formData[field as keyof FormData]) {
+        setError("Please fill in all required fields and set your location using GPS.");
+        return;
+      }
     }
 
     const age = parseInt(formData.age);
@@ -154,6 +146,7 @@ export default function KursorProfileForm() {
     }
 
     setIsSubmitting(true);
+    setIsLoading(true);
     try {
       const use_result = await isUserExist(user.id);
       if (use_result.success) {
@@ -188,8 +181,36 @@ export default function KursorProfileForm() {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    // Full-page loading screen
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="loader mb-4"></div>
+          <p className="text-gray-700 font-medium text-lg">Loading...</p>
+        </div>
+        <style jsx>{`
+          .loader {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #FFDE59;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg);}
+            100% { transform: rotate(360deg);}
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex">
@@ -220,7 +241,6 @@ export default function KursorProfileForm() {
           </div>
           <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
           <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
-
           <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
 
           {/* Latitude / Longitude side by side with GPS button */}
