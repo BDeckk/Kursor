@@ -265,17 +265,28 @@ export default function EditProfileModal({
               />
             </div>
 
-            {/* Strand */}
-            <div>
-              <label className="block text-base font-bold font-outfit text-gray-800">Strand</label>
-              <input
-                type="text"
-                value={editedProfile.strand || ""}
-                onChange={(e) => handleInputChange("strand", e.target.value)}
-                className="w-full px-5 py-3.5 rounded-2xl border-2 border-yellow-400 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 focus:outline-none font-fredoka text-gray-900 transition-all duration-200"
-                placeholder="Enter your strand (e.g., STEM, ABM, HUMSS)"
-              />
-            </div>
+           {/* Strand */}
+              <div>
+                <label className="block text-base font-bold font-outfit text-gray-800">Strand</label>
+                <select
+                  value={editedProfile.strand || ""}
+                  onChange={(e) => handleInputChange("strand", e.target.value)}
+                  className="w-full px-5 py-3.5 pr-12 rounded-2xl border-2 border-yellow-400 
+                    focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200 focus:outline-none
+                    font-fredoka text-gray-900 capitalize transition-all duration-200 cursor-pointer appearance-none"
+                >
+                  <option value="">Select strand</option>
+                  <option value="TVL-HE">TVL-HE</option>
+                  <option value="TVL-ICT">TVL-ICT</option>
+                  <option value="STEM">STEM</option>
+                  <option value="ABM">ABM</option>
+                  <option value="HUMSS">HUMSS</option>
+                  <option value="GAS">GAS</option>
+                  <option value="ICT">ICT</option>
+                  <option value="Arts & Design">Arts & Design</option>
+                </select>
+              </div>
+
 
             {/* Location */}
             <div>
