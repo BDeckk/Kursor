@@ -122,3 +122,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar for ScrollStack */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pre-animation {
+  opacity: 0 !important;
+  transform: translateY(40px);
+}
