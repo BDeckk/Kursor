@@ -112,7 +112,7 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
                   }}
                   className="absolute top-4 right-4"
                 >
-                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                  <Heart className={`w-6 h-6 ${isLiked ? "fill-yellow-500 text-yellow-500" : "text-gray-400"}`} />
                 </button>
 
                 <div className="flex flex-col items-center justify-center flex-1">
@@ -134,7 +134,7 @@ export default function TopLikedSchoolsCarousel({ userId }: { userId?: string })
                 </div>
 
                 <div className="w-full mt-auto pt-4 flex items-center justify-center gap-2 text-sm">
-                  <Heart className={`w-4 h-4 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+                  <Heart className={`w-6 h-6 ${isLiked ? "fill-yellow-500 text-yellow-500" : "text-gray-400"}`} />
                   <span className="text-gray-700">{likes} {likes === 1 ? 'like' : 'likes'}</span>
                 </div>
               </div>

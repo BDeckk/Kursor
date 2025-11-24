@@ -47,11 +47,6 @@ export default function ProfilePage() {
   const [riasecLoading, setRiasecLoading] = useState(true);
   const [schoolsLoading, setSchoolsLoading] = useState(true);
 
-  // Entrance animation
-  useEffect(() => {
-    setTimeout(() => setIsVisible(true), 100);
-  }, []);
-
   // Load profile
   useEffect(() => {
     if (!user?.id) {
@@ -61,7 +56,6 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       const data = await getProfile(user.id);
       if (data) {
-        // Convert birthdate to ISO string if it's a number
         setProfileData({
           ...data,
           birthdate: data.birthdate
@@ -161,7 +155,7 @@ export default function ProfilePage() {
     loadDetails();
   }, [likedSchools]);
 
-  // Page ready logic
+  // Page ready logic with entrance animation
   useEffect(() => {
     const dataReady = !profileLoading && !riasecLoading && !schoolsLoading;
 
@@ -171,8 +165,9 @@ export default function ProfilePage() {
       const timer = setTimeout(() => {
         setPageReady(true);
         setIsLoading(false);
-        setTimeout(() => setIsVisible(true), 50);
-      }, 500);
+        // Trigger entrance animation shortly after page is ready
+        setTimeout(() => setIsVisible(true), 100);
+      }, 300);
 
       return () => clearTimeout(timer);
     }
@@ -182,71 +177,76 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen pb-12">
-      <div className={`transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+      {/* Navbar with fade-in */}
+      <div 
+        className={`transition-all duration-700 ease-out ${
+          isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+        }`}
+      >
         <Navbar />
       </div>
       
-      {/* Profile Header */}
+      {/* Profile Header with slide and fade */}
       <div className="max-w-6xl mx-auto px-6 pt-24">
-          <div
-            className={`bg-[#FFDE59] rounded-3xl px-8 py-6 flex items-center justify-between mb-15 shadow-sm transition-all duration-700 ${
-              isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
-            }`}
-            style={{ transitionDelay: "100ms" }}
-          >
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 bg-gray-300 rounded-full overflow-hidden">
-                {profileData?.profile_image_url ? (
-                  <img
-                    src={profileData.profile_image_url}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-yellow-100">
-                    <svg
-                      className="w-10 h-10 text-yellow-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">{profileData?.full_name || "Guest User"}</h1>
-            </div>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="p-2 hover:bg-yellow-500 rounded-full transition"
-            >
-              <svg className="w-7 h-7 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+        <div
+          className={`bg-[#FFDE59] rounded-3xl px-8 py-6 flex items-center justify-between mb-15 shadow-sm transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
+          }`}
+          style={{ transitionDelay: "150ms" }}
+        >
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 bg-gray-300 rounded-full overflow-hidden">
+              {profileData?.profile_image_url ? (
+                <img
+                  src={profileData.profile_image_url}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
                 />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-yellow-100">
+                  <svg
+                    className="w-10 h-10 text-yellow-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">{profileData?.full_name || "Guest User"}</h1>
           </div>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="p-2 hover:bg-yellow-500 rounded-full transition"
+          >
+            <svg className="w-7 h-7 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
+      </div>
 
       <div className="max-w-5xl mx-auto">
-        {/* Personal Information */}
+        {/* Personal Information with cascading entrance */}
         <div
-          className={`bg-white rounded-3xl border-7 border-[#FFDE59] p-8 pl-25 mb-15 shadow-sm relative transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          className={`bg-white rounded-3xl border-7 border-[#FFDE59] p-8 pl-25 mb-15 shadow-sm relative transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
           }`}
-          style={{ transitionDelay: "200ms" }}
+          style={{ transitionDelay: "300ms" }}
         >
           <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
             Personal Information
@@ -280,12 +280,12 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Assessment History - Now with separated sections */}
+        {/* Assessment History with staggered entrance */}
         <div
-          className={`bg-white rounded-3xl border-7 border-[#FFDE59] px-18 pt-8 pb-10 mb-15 shadow-sm relative transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          className={`bg-white rounded-3xl border-7 border-[#FFDE59] px-18 pt-8 pb-10 mb-15 shadow-sm relative transition-all duration-700 ease-out ${
+            isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
           }`}
-          style={{ transitionDelay: "300ms" }}
+          style={{ transitionDelay: "450ms" }}
         >
           <h2 className="absolute -top-6 left-8 font-outfit bg-white px-4 text-[25px] font-semibold text-gray-900">
             Assessment History
@@ -295,12 +295,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Liked Schools - Fixed with more padding */}
+      {/* Liked Schools with final entrance */}
       <div
         className={`w-full px-6 transition-all duration-700 ease-out ${
-          isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+          isVisible ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-8 scale-95"
         }`}
-        style={{ transitionDelay: "400ms" }}
+        style={{ transitionDelay: "600ms" }}
       >
         <div className="max-w-6xl mx-auto">
           <div className="bg-white rounded-3xl border-7 border-[#FFDE59] px-25 py-10 shadow-sm relative">
