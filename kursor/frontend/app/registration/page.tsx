@@ -26,13 +26,20 @@ interface InputFieldProps {
   readOnly?: boolean;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 interface SelectFieldProps {
   label: string;
   name: keyof FormData;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  options: string[];
+  options: SelectOption[]; 
 }
+
+
 
 export default function KursorProfileForm() {
   const { session, insertUser, isUserExist } = UserAuth();
@@ -55,6 +62,14 @@ export default function KursorProfileForm() {
     latitude: "",
     longitude: "",
   });
+
+  const genderOptions = [
+    { value: "male", label: "Male" },
+    { value: "female", label: "Female" },
+    { value: "other", label: "Other" },
+    { value: "prefer-not-to-say", label: "Prefer not to say" }
+  ];
+
 
   // Check if user already exists
   useEffect(() => {
@@ -352,8 +367,15 @@ export default function KursorProfileForm() {
             <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">Age *</label>
             <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full text-gray-600">{formData.age || "Select birthdate to calculate"}</div>
           </div>
-          <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
-          <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
+          
+          <SelectField
+            label="Gender *"
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            options={genderOptions}
+          />
+
           <InputField 
             label="Address *" 
             name="address" 
@@ -404,9 +426,13 @@ function InputField({ label, name, value, onChange, type="text", placeholder="",
 // SelectField component
 function SelectField({ label, name, value, onChange, options }: SelectFieldProps) {
   const isRequired = label.includes('*');
+
   return (
     <div className="relative pb-4">
-      <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">{label}</label>
+      <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">
+        {label}
+      </label>
+
       <select
         name={name}
         value={value}
@@ -415,7 +441,11 @@ function SelectField({ label, name, value, onChange, options }: SelectFieldProps
         className="w-full px-6 py-3 pr-10 border-2 border-yellow-400 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white cursor-pointer appearance-none"
       >
         <option value="">Select option</option>
-        {options.map(opt => <option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
       </select>
     </div>
   );

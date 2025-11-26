@@ -8,7 +8,7 @@ interface NearbySchool {
   rank: number;
   schoolname: string;
   image?: string | null;
-  available_courses?: string; // <-- include this
+  available_courses?: string;
   distance?: string;
 }
 

@@ -12,7 +12,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-// Helper: convert rank (1 = best) to star rating (minStars → maxStars)
+//converts rank (1 = best) to star rating (minStars → maxStars)
 const getStarRating = (rank: number, maxRank = 10, minStars = 3, maxStars = 5) => {
   const stars = maxStars - ((rank - 1) * (maxStars - minStars)) / (maxRank - 1);
   return Math.round(stars * 2) / 2; // round to nearest 0.5
