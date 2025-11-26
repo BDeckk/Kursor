@@ -375,6 +375,13 @@ export default function KursorProfileForm() {
             onChange={handleChange}
             options={genderOptions}
           />
+          <SelectField
+            label="Strand *"
+            name="strand"
+            value={formData.strand}
+            onChange={handleChange}
+            options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"].map(s => ({ value: s, label: s }))}
+          />
 
           <InputField 
             label="Address *" 
