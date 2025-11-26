@@ -54,7 +54,7 @@
       setLoading(true);
 
       try {
-        const redirectTo = `${process.env.NEXT_PUBLIC_APP_URL}/registration`;
+        const redirectTo = `https://kursor-project.vercel.app/registration`;
 
           const { data, error } = await supabase.auth.signUp({
             email,

@@ -13,6 +13,7 @@ export default function AuthHashHandler() {
       router.replace(`/reset-password${hash}`);
     }
   }, [router]);
+  
 
   return null;
 }

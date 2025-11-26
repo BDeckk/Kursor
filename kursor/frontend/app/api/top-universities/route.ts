@@ -40,7 +40,7 @@ export async function GET() {
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
-    // 1️⃣ Check Supabase for this month's top universities
+    // 1 - Check Supabase for this month's top universities
     const { data: existing, error } = await supabase
       .from("top_universities")
       .select("*")
@@ -53,7 +53,7 @@ export async function GET() {
       return NextResponse.json({ topUniversities: existing });
     }
 
-    // 2️⃣ Call Gemini if no existing data
+    // 2 -  Call Gemini if no existing data
     let geminiData: { rank: number; name: string; reason?: string }[] = [];
     if (genAI) {
       try {
@@ -68,7 +68,7 @@ export async function GET() {
       }
     }
 
-    // 3️⃣ Fallback
+    // 3️ -  Fallback
     if (!geminiData || geminiData.length === 0) {
       geminiData = [
         { rank: 1, name: "University of San Carlos (USC – Talamban Campus)" },
@@ -84,7 +84,7 @@ export async function GET() {
       ];
     }
 
-    // 4️⃣ Map Gemini/fallback to Supabase schools
+    // 4 - Map Gemini/fallback to Supabase schools
     const { data: schools } = await supabase.from("schools").select("*");
     const topUniversities: TopUniversity[] = geminiData.map((g, i) => {
       const matched = schools?.find(s => normalize(s.name) === normalize(g.name));
@@ -97,7 +97,7 @@ export async function GET() {
       };
     });
 
-    // 5️⃣ Save into Supabase
+    // 5️ -  Save into Supabase
     await supabase.from("top_universities").insert(
       topUniversities.map(u => ({
         university_id: u.university_id,

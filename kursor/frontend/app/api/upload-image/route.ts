@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
+    // info handling
     console.log("📥 Image URL:", imageUrl);
     console.log("📝 File name:", fileName);
     console.log("🆔 Program ID:", programId);
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       .from("course-images")
       .upload(fileName, imageBuffer, {
         contentType: "image/jpeg",
-        upsert: true, // This replaces if exists
+        upsert: true, 
       });
 
     if (uploadError) {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     console.log("✅ Upload successful:", uploadData?.path);
 
-    // Get public URL
+    // Gets public URL
     const { data } = supabase.storage
       .from("course-images")
       .getPublicUrl(fileName);
