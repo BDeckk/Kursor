@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 }
 
 function getImageUrlForProgram(title: string): string {
-  // Extract key words for visual elements - map to image URLs
+  // Extracts keywords for visual elements - map to image URLs
   const words = title.toLowerCase();
   
   if (words.includes("computer") || words.includes("software") || words.includes("it")) {
@@ -55,6 +55,6 @@ function getImageUrlForProgram(title: string): string {
     return "/career-images/programs-accountant.svg";
   }
   
-  // Default: university/education
+  // Default picture for the programs
   return "/career-images/programs-career.svg";
 }
