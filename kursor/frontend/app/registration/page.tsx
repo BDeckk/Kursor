@@ -345,12 +345,12 @@ export default function KursorProfileForm() {
           <InputField label="Full Name *" name="full_name" value={formData.full_name} onChange={handleChange} />
           <div className="relative pb-4">
             <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">Email Address *</label>
-            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600 cursor-not-allowed">{user?.email}</div>
+            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full text-gray-600 cursor-not-allowed">{user?.email}</div>
           </div>
           <InputField label="Birthdate *" type="date" name="birthdate" value={formData.birthdate} onChange={handleChange} />
           <div className="relative pb-4">
             <label className="absolute -top-3 left-6 bg-white px-2 text-gray-500 text-md font-fredoka font-medium">Age *</label>
-            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full bg-gray-50 text-gray-600">{formData.age || "Select birthdate to calculate"}</div>
+            <div className="w-full px-6 py-3 border-2 border-gray-300 rounded-full text-gray-600">{formData.age || "Select birthdate to calculate"}</div>
           </div>
           <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
           <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
