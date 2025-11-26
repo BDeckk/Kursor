@@ -107,26 +107,89 @@ export default function KursorProfileForm() {
     }
   };
 
-  // Geocode address to get latitude and longitude
+  // Geocode address using multiple services with fallback
   const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number } | null> => {
     try {
-      const encodedAddress = encodeURIComponent(address);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
-        {
-          headers: {
-            'User-Agent': 'KursorApp/1.0'
+      // Add "Philippines" if not already included for better accuracy
+      const fullAddress = address.toLowerCase().includes('philippines') 
+        ? address 
+        : `${address}, Philippines`;
+      
+      const encodedAddress = encodeURIComponent(fullAddress);
+      
+      // Try Nominatim first
+      try {
+        const nominatimResponse = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=ph`,
+          {
+            headers: {
+              'User-Agent': 'KursorApp/1.0'
+            }
           }
+        );
+        
+        const nominatimData = await nominatimResponse.json();
+        
+        if (nominatimData && nominatimData.length > 0) {
+          return {
+            latitude: parseFloat(nominatimData[0].lat),
+            longitude: parseFloat(nominatimData[0].lon)
+          };
         }
-      );
+      } catch (err) {
+        console.log("Nominatim failed, trying alternative...", err);
+      }
+
+      // Fallback to Photon (another OpenStreetMap service)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
+        const photonResponse = await fetch(
+          `https://photon.komoot.io/api/?q=${encodedAddress}&limit=1`
+        );
+        
+        const photonData = await photonResponse.json();
+        
+        if (photonData.features && photonData.features.length > 0) {
+          const coords = photonData.features[0].geometry.coordinates;
+          return {
+            latitude: coords[1],
+            longitude: coords[0]
+          };
+        }
+      } catch (err) {
+        console.log("Photon failed, trying final fallback...", err);
+      }
+
+      // Final fallback to geocode.maps.co
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
+        const mapsCoResponse = await fetch(
+          `https://geocode.maps.co/search?q=${encodedAddress}&countrycode=ph`
+        );
+        
+        const mapsCoData = await mapsCoResponse.json();
+        
+        if (mapsCoData && mapsCoData.length > 0) {
+          return {
+            latitude: parseFloat(mapsCoData[0].lat),
+            longitude: parseFloat(mapsCoData[0].lon)
+          };
+        }
+      } catch (err) {
+        console.log("Maps.co failed", err);
+      }
+
+      // If all services fail, try to extract city/province and use approximate coordinates
+      const cebuMatch = address.toLowerCase().match(/cebu/);
+      const manilaMatch = address.toLowerCase().match(/manila|metro manila|ncr/);
+      const davaoMatch = address.toLowerCase().match(/davao/);
       
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        return {
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon)
-        };
+      if (cebuMatch) {
+        return { latitude: 10.3157, longitude: 123.8854 }; // Cebu City center
+      } else if (manilaMatch) {
+        return { latitude: 14.5995, longitude: 120.9842 }; // Manila center
+      } else if (davaoMatch) {
+        return { latitude: 7.1907, longitude: 125.4553 }; // Davao center
       }
       
       return null;
@@ -198,7 +261,7 @@ export default function KursorProfileForm() {
       const coordinates = await geocodeAddress(formData.address);
       
       if (!coordinates) {
-        setError("Could not find location for the provided address. Please check and try again.");
+        setError("Could not locate the address. Please include City/Municipality and Province (e.g., 'Lahug, Cebu City, Cebu')");
         setIsSubmitting(false);
         setIsLoading(false);
         return;
@@ -296,7 +359,7 @@ export default function KursorProfileForm() {
             name="address" 
             value={formData.address} 
             onChange={handleChange} 
-            placeholder="e.g., Barangay Lahug, Cebu City, Cebu Province" 
+            placeholder="e.g., Barangay Lahug, Cebu City, Cebu" 
           />
 
           <div className="pt-4 flex justify-center">
