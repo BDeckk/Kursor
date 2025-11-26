@@ -263,7 +263,10 @@ export default function ProfilePage() {
             </div>
             <div className="flex">
               <span className="font-bold font-outfit text-gray-900 w-48">Gender:</span>
-              <span className="text-gray-900 capitalize font-fredoka">{profileData?.gender || "—"}</span>
+              <span className="text-gray-900 capitalize font-fredoka">
+                {profileData?.gender ? profileData.gender.replace(/-/g, " ") : "—"}
+              </span>
+
             </div>
             <div className="flex">
               <span className="font-bold font-outfit text-gray-900 w-48">Age:</span>
