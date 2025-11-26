@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
     setError("");
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `https://kursor-project.vercel.app/reset-password`,
     });
 
     if (error) return setError(error.message);
