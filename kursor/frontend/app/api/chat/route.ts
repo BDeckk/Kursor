@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ answer: "Missing 'question'." }, { status: 400 });
     }
 
-    // Fetch Cebu City schools from Supabase
+    // Fetch Cebu City schools from Supabase (raw data)
     const { data: schools } = await supabase
       .from("schools")
       .select("*");
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       ? schools.map((s: any) => `${s.name}: ${s.available_courses}: ${s.location} : ${s.description}`).join("\n")
       : "No additional database info available.";
 
-    // Build prompt with rules that allow AI to use its own knowledge
+    // a prompt with rules and request that allow AI to use its own knowledge
     const prompt = `
 You are a knowledgeable career advisor AI focused on Cebu City universities, colleges, and programs. 
 You can answer questions about:

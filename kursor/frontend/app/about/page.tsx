@@ -1,5 +1,4 @@
-// components/AboutPage.jsx
-// or use pages/about/page.jsx depending on your Next.js setup
+
 "use client";
 
 import Image from "next/image";
@@ -33,7 +32,7 @@ export default function AboutPage() {
           if (img.complete) return res(true);
 
           img.onload = () => res(true);
-          img.onerror = () => res(true); // don't block on errors
+          img.onerror = () => res(true);
         })
     )
   );
@@ -49,13 +48,11 @@ export default function AboutPage() {
       })
       .finally(() => {
         if (!mounted) return;
-        // slight delay so layout stabilizes; matches Features approach
         setTimeout(() => {
           setPageReady(true);
           setIsLoading(false);
-          // small extra delay then reveal
           setTimeout(() => setIsVisible(true), 80);
-        }, 450); // tuned to feel snappy but stable
+        }, 450); 
       });
 
     return () => {
@@ -69,7 +66,6 @@ export default function AboutPage() {
   };
 
   if (!pageReady) {
-    // keep full-screen placeholder so layout doesn't flash; global loading is visible
     return <div className="min-h-screen" />;
   }
 
