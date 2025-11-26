@@ -158,8 +158,8 @@ export default function DashboardPage() {
   if (!pageReady) return null;
 
   const slides = [
-    { image: "/homepage_carousel/carousel3.png" },
-    { image: "/homepage_carousel/carousel2.png" },
+    { image: "/homepage_carousel/carousel7.png" },
+    { image: "/homepage_carousel/carousel5.png" },
   ];
 
   const fields = [
@@ -241,10 +241,10 @@ export default function DashboardPage() {
           <Navbar />
         </div>
 
-        <main className="pb-1 pt-20">
+        <main className="pb-1 pt-15">
           {/* Main Carousel */}
           <div
-            className={`mb-9 pl-[19%] pr-[19%] pt-4 transition-all duration-700 ease-out ${
+            className={`mb-9 pt-4 h-50px transition-all duration-700 ease-out ${
               isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-8"
             }`}
             style={{ transitionDelay: "100ms" }}
