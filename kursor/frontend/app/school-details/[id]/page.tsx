@@ -8,6 +8,7 @@ import { useNearbySchools } from "@/hooks/userNearbySchools";
 import { NearbySchoolCarousel } from "@/components/ui/nearby-school";
 import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 import SchoolReviewsPage from "@/components/reviews/SchoolReviews";
+import { UserAuth } from "@/Context/AuthContext";
 
 
 interface School {
@@ -29,6 +30,9 @@ export default function SchoolDetailsPage() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
   const { setIsLoading } = useGlobalLoading();
+
+  const {session} = UserAuth();
+    const user = session?.user;
 
   const [school, setSchool] = useState<School | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -302,7 +306,7 @@ export default function SchoolDetailsPage() {
           <p className="text-center text-red-600 font-fredoka">{locationError}</p>
         ) : nearbySchools.length > 0 ? (
           <div className="max-w-[1300px] mx-auto">
-            <NearbySchoolCarousel school_card={nearbySchools} />
+            <NearbySchoolCarousel school_card={nearbySchools} userId={user?.id}/>
           </div>
         ) : (
           <p className="text-center text-gray-800 font-fredoka">No nearby schools found.</p>

@@ -43,7 +43,6 @@ export default function KursorProfileForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [locationStatus, setLocationStatus] = useState("");
 
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
@@ -82,7 +81,6 @@ export default function KursorProfileForm() {
     }
   }, [user]);
 
-
   // Calculate age
   const calculateAge = (birthdate: string): string => {
     if (!birthdate) return "";
@@ -109,30 +107,33 @@ export default function KursorProfileForm() {
     }
   };
 
-  // Set latitude and longitude using GPS
-  const setLocation = () => {
-    if (!navigator.geolocation) {
-      console.error("GPS not supported");
-      setLocationStatus("❌ GPS not supported on this browser.");
-      return;
-    }
-
-    setLocationStatus("Getting GPS location...");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setFormData((prev) => ({
-          ...prev,
-          latitude: latitude.toString(),
-          longitude: longitude.toString(),
-        }));
-        setLocationStatus("✅ Location set successfully.");
-      },
-      (err) => {
-        console.error("GPS error:", err);
-        setLocationStatus("⚠️ Could not retrieve GPS location. Please allow location access.");
+  // Geocode address to get latitude and longitude
+  const geocodeAddress = async (address: string): Promise<{ latitude: number; longitude: number } | null> => {
+    try {
+      const encodedAddress = encodeURIComponent(address);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'KursorApp/1.0'
+          }
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        return {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon)
+        };
       }
-    );
+      
+      return null;
+    } catch (err) {
+      console.error("Error geocoding address:", err);
+      return null;
+    }
   };
 
   // Validation helper
@@ -146,8 +147,6 @@ export default function KursorProfileForm() {
         "strand",
         "age",
         "address",
-        "latitude",
-        "longitude",
       ];
 
       for (const field of requiredFields) {
@@ -185,12 +184,23 @@ export default function KursorProfileForm() {
 
     setIsSubmitting(true);
     setIsLoading(true);
+    
     try {
       const use_result = await isUserExist(user.id);
       if (use_result.success) {
         console.error("User already exists");
         setError("You already have a profile. Redirecting...");
         setTimeout(() => router.replace("/dashboard"), 1500);
+        return;
+      }
+
+      // Geocode the address to get coordinates
+      const coordinates = await geocodeAddress(formData.address);
+      
+      if (!coordinates) {
+        setError("Could not find location for the provided address. Please check and try again.");
+        setIsSubmitting(false);
+        setIsLoading(false);
         return;
       }
 
@@ -203,8 +213,8 @@ export default function KursorProfileForm() {
         age: formData.age,
         strand: formData.strand,
         birthdate: formData.birthdate,
-        latitude: parseFloat(formData.latitude),
-        longitude: parseFloat(formData.longitude),
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
         profile_image_url: null,
       };
 
@@ -281,14 +291,13 @@ export default function KursorProfileForm() {
           </div>
           <SelectField label="Gender *" name="gender" value={formData.gender} onChange={handleChange} options={["male","female","other","prefer-not-to-say"]} />
           <SelectField label="Strand *" name="strand" value={formData.strand} onChange={handleChange} options={["TVL-HE","TVL-ICT","STEM","ABM","HUMSS","GAS","ICT","Arts & Design"]} />
-          <InputField label="Address *" name="address" value={formData.address} onChange={handleChange} placeholder="Enter your address" />
-
-          <div className="flex items-center space-x-2">
-            <InputField label="Latitude *" name="latitude" value={formData.latitude} readOnly />
-            <InputField label="Longitude *" name="longitude" value={formData.longitude} readOnly />
-            <button onClick={setLocation} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Set Location</button>
-          </div>
-          {locationStatus && <p className="text-sm text-gray-600">{locationStatus}</p>}
+          <InputField 
+            label="Address *" 
+            name="address" 
+            value={formData.address} 
+            onChange={handleChange} 
+            placeholder="e.g., Barangay Lahug, Cebu City, Cebu Province" 
+          />
 
           <div className="pt-4 flex justify-center">
             <button
