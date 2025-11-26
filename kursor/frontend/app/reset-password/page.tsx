@@ -9,7 +9,7 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updated, setUpdated] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true); // ✅ loading state
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
   };
 
   if (loading) {
-    // ✅ loading screen JSX
+    // loading screen JSX
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">

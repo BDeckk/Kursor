@@ -84,7 +84,7 @@ export default function ProgramDetailsClient() {
     }
   }, [loading, nearbyLoading, program, setIsLoading]);
 
-  // Don't show content until everything is ready
+  // will not the show content until everything is ready
   if (!pageReady) {
     return null;
   }
@@ -130,7 +130,7 @@ export default function ProgramDetailsClient() {
       ? descriptionText.substring(0, 300) + "..."
       : descriptionText;
 
-  // 🔥 CLEAN THE REQUIRED STRAND STRING HERE
+  // will clean the strand string
   const formattedStrands = program.required_strand
     ?.replace(/[\[\]"]+/g, "")     // remove brackets and quotes
     .split(",")                    // split

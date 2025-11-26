@@ -6,7 +6,7 @@ import { supabase } from "@/supabaseClient";
 interface ProfileAvatarProps {
   userId?: string | null;
   username: string;
-  size?: number; // default 40
+  size?: number; 
 }
 
 const colors = ["#F87171", "#FBBF24", "#34D399", "#60A5FA", "#A78BFA", "#F472B6"];

@@ -227,7 +227,7 @@ export default function ResultPage() {
     return "U";
   };
 
-  // Don't show content until everything is ready
+  // will not show content until everything is ready
   if (!pageReady) {
     return null;
   }

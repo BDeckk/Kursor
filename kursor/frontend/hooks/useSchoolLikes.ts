@@ -123,7 +123,7 @@ export function useSchoolLikes(userId?: string): LikeData {
             .match({ user_id: userId, school_id: idStr });
           if (error) throw error;
         } else {
-          // Like - FIXED: use user_id instead of userId
+          // Like 
           const { error } = await supabase
             .from("school_likes")
             .insert({ user_id: userId, school_id: idStr });

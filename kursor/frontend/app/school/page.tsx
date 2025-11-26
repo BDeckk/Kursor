@@ -10,7 +10,6 @@ import { useState, useEffect } from "react";
 import { useGlobalLoading } from "@/Context/GlobalLoadingContext";
 import TopLikedSchoolsCarousel from "@/components/TopLikeSchoolsCarousel";
 
-/* --- Simple Skeleton (used only if you later want it) --- */
 const SkeletonCarousel = () => (
   <div className="flex gap-4 overflow-x-auto animate-pulse">
     {Array.from({ length: 4 }).map((_, i) => (

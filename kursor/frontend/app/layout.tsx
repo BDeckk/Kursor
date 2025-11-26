@@ -5,7 +5,7 @@ import { Fredoka } from "next/font/google";
 import { Outfit } from "next/font/google";
 import { AuthProvider } from "@/Context/AuthContext";
 import { GlobalLoadingProvider } from "@/Context/GlobalLoadingContext"; 
-import AuthHashHandler from "@/components/AuthHashHandler"; // ✅ import
+import AuthHashHandler from "@/components/AuthHashHandler"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
