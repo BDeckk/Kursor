@@ -375,6 +375,7 @@ export default function KursorProfileForm() {
             onChange={handleChange}
             options={genderOptions}
           />
+          
           <SelectField
             label="Strand *"
             name="strand"
