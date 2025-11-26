@@ -23,16 +23,34 @@
 
   function buildPrompt(riasecCode: string, programs: Program[]) {
     return `
-  You are a strict recommendation system.
-  Choose exactly 10 programs that best match the RIASEC code.
+You are a strict recommendation system. 
+Your task is to select EXACTLY 10 programs from the list I will give you.
 
-  RIASEC Code: ${riasecCode}
+Rules:
+1. You MUST only choose titles from the provided list. Never invent new programs.
+2. Rank programs by how well their RIASEC tags match the RIASEC code.
+3. A tag matches if it appears in the RIASEC code (case-insensitive).
+4. Prefer programs with more matching tags.
+5. If fewer than 10 programs match, fill the remaining slots with the closest matches (but still from the list).
 
-  Programs:
-  ${programs.map((p, idx) => `${idx + 1}. "${p.title}" — Tags: ${Array.isArray(p.riasec_tags) ? p.riasec_tags.join(", ") : "INVALID_TAGS"}`).join("\n")}
+RIASEC Code: ${riasecCode}
 
-  Return ONLY a JSON array of 10 titles.
-  `;
+Programs:
+${programs
+  .map(
+    (p, idx) =>
+      `${idx + 1}. "${p.title}" — Tags: ${
+        Array.isArray(p.riasec_tags)
+          ? p.riasec_tags.join(", ")
+          : "INVALID_TAGS"
+      }`
+  )
+  .join("\n")}
+
+Output format:
+Return ONLY a valid JSON array with EXACTLY 10 titles.
+Do NOT include explanations, reasoning, or extra text.
+`;
   }
 
   function findMatchingPrograms(geminiTitles: string[], programs: Program[]) {

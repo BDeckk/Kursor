@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log("🔍 Finding image for:", query);
 
-    // Get the appropriate image URL based on program title
+    // Gets the appropriate image URL based on program title
     const imageUrl = getImageUrlForProgram(query);
 
     console.log("✅ Image URL selected:", imageUrl);

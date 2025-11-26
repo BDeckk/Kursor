@@ -260,16 +260,6 @@ export default function SchoolDetailsPage() {
             <p>
               <strong>Contact:</strong> {school.contact_number}
             </p>
-            <div className="flex items-center gap-2">
-              <strong>Critique Review:</strong>
-              {averageRating ? (
-                <span className="flex items-center gap-1 text-gray-800 font-fredoka">
-                  <span><img src='/star-filled.png' className="w-auto h-6"/></span> {averageRating}
-                </span>
-              ) : (
-                <span className="text-gray-800 font-fredoka">No reviews yet</span>
-              )}
-            </div>
           </div>
 
           <div className="pt-6 border-t border-gray-200">

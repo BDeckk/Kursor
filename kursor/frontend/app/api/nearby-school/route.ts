@@ -13,7 +13,7 @@ export async function GET(req: Request) {
 
     console.log("📍 Calling get_nearby_schools with:", lat, lng);
 
-    //  Ensures parameter names match your SQL function exactly
+    //  Ensures parameter names match SQL function exactly - from the supabase
     const { data, error } = await supabase.rpc("get_nearby_schools", {
       user_lat: lat,
       user_lng: lng,
